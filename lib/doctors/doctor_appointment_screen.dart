@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:getwidget/getwidget.dart';
-import 'package:healthcare/auth/screens/payment_screen.dart';
+import 'package:healthcare/billing/payment_screen.dart';
 import 'package:intl/intl.dart';
 
 class DoctorAppointmentScreen extends StatefulWidget {

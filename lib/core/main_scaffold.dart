@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/auth/screens/booking_screen.dart';
-import 'package:healthcare/auth/screens/faq_screen.dart';
-import 'package:healthcare/auth/screens/home_screen.dart';
-import 'package:healthcare/auth/screens/profile_screen.dart';
-import 'package:healthcare/auth/screens/search_doctor.dart';
+import 'package:healthcare/appointments/booking_screen.dart';
+import 'package:healthcare/appointments/user_appointments_screen.dart';
+import 'package:healthcare/dashboard/faq_screen.dart';
+import 'package:healthcare/dashboard/home_screen.dart';
+import 'package:healthcare/doctors/chat_screen.dart';
+import 'package:healthcare/doctors/videocall_screen.dart';
+import 'package:healthcare/user/profile_screen.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -17,10 +19,9 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    SearchDoctorScreen(),
-    BookingScreen(),
+    UserAppointmentsScreen(),
     FAQScreen(),
-    ProfileScreen(),
+    VideoCallScreen(),
   ];
 
   @override
@@ -48,10 +49,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             type: BottomNavigationBarType.fixed,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                label: 'Search',
-              ),
+
               BottomNavigationBarItem(
                 icon: Icon(Icons.calendar_today),
                 label: 'Bookings',
