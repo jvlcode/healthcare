@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/appointments/user_appointments_screen.dart';
+import 'package:healthcare/appointments/appointments_screen.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
   const BookingSuccessScreen({super.key});
@@ -166,11 +166,10 @@ class BookingSuccessScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
+                      Navigator.pushReplacementNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => UserAppointmentsScreen(),
-                        ),
+                        '/',
+                        arguments: 1, // 1 = Bookings tab
                       );
                     },
                     style: ElevatedButton.styleFrom(

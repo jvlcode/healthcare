@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/appointments/booking_screen.dart';
-import 'package:healthcare/appointments/user_appointments_screen.dart';
+import 'package:healthcare/appointments/appointments_screen.dart';
 import 'package:healthcare/dashboard/faq_screen.dart';
 import 'package:healthcare/dashboard/home_screen.dart';
-import 'package:healthcare/doctors/chat_screen.dart';
 import 'package:healthcare/doctors/videocall_screen.dart';
-import 'package:healthcare/user/profile_screen.dart';
+import 'package:healthcare/core/app_drawer.dart';
+import 'package:healthcare/core/app_header.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -16,18 +15,33 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _currentIndex = 0;
+  bool _initialized = false;
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    UserAppointmentsScreen(),
+    AppointmentsScreen(),
     FAQScreen(),
     VideoCallScreen(),
   ];
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is int) {
+        _currentIndex = args;
+      }
+      _initialized = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      appBar: AppHeader(subtitle: "Your support for well-being"),
+      drawer: const AppDrawer(),
       body: _screens[_currentIndex],
       bottomNavigationBar: ClipRRect(
         borderRadius: BorderRadiusGeometry.horizontal(
@@ -52,13 +66,9 @@ class _MainScaffoldState extends State<MainScaffold> {
 
               BottomNavigationBarItem(
                 icon: Icon(Icons.calendar_today),
-                label: 'Bookings',
+                label: 'Appointments',
               ),
               BottomNavigationBarItem(icon: Icon(Icons.help), label: 'FAQs'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
-              ),
             ],
           ),
         ),

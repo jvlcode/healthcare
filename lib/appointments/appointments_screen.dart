@@ -3,9 +3,10 @@ import 'package:getwidget/getwidget.dart';
 import 'package:healthcare/appointments/videocall_history_screen.dart';
 import 'package:healthcare/doctors/chat_screen.dart';
 import 'package:healthcare/doctors/videocall_screen.dart';
+import 'package:healthcare/core/app_header.dart';
 
-class UserAppointmentsScreen extends StatelessWidget {
-  const UserAppointmentsScreen({super.key});
+class AppointmentsScreen extends StatelessWidget {
+  const AppointmentsScreen({super.key});
 
   // Sample booking data
   final List<Map<String, dynamic>> bookings = const [
@@ -51,23 +52,20 @@ class UserAppointmentsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F2),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF01312F),
-        centerTitle: true,
-        title: const Text(
-          "My Appointments",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Colors.white,
-          ),
-        ),
-      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: bookings.length,
+        itemCount: bookings.length + 1,
         itemBuilder: (context, index) {
-          final booking = bookings[index];
+          if (index == 0) {
+            return const Padding(
+              padding: EdgeInsets.all(8),
+              child: Text(
+                'Appointments',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+            );
+          }
+          final booking = bookings[index - 1];
           final statusColor = _statusColor(booking['status']);
 
           return Container(
@@ -175,22 +173,6 @@ class UserAppointmentsScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: GFButton(
-                        onPressed: () {
-                          GFToast.showToast(
-                            "Details for ${booking['doctorName']}",
-                            context,
-                            toastPosition: GFToastPosition.BOTTOM,
-                          );
-                        },
-                        text: "View Details",
-                        color: theme.primaryColor,
-                        size: GFSize.MEDIUM,
-                        shape: GFButtonShape.pills,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: GFButton(
                         onPressed: booking['status'] == 'Cancelled'

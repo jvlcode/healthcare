@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/app_header.dart';
 
 class FAQScreen extends StatelessWidget {
   const FAQScreen({super.key});
@@ -7,33 +8,6 @@ class FAQScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBEFEA), // light peach background
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF01312F), // dark teal header
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'FAQ',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 22,
-          ),
-        ),
-        centerTitle: true,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(20),
-          child: Padding(
-            padding: EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              'Frequently asked questions',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ),
-        ),
-      ),
 
       body: Padding(
         padding: const EdgeInsets.all(20),

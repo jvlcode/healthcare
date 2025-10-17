@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/appointments/booking_screen.dart';
-import '../widgets/doctor_card.dart';
-import '../widgets/date_box.dart';
-import '../widgets/time_box.dart';
+import 'package:healthcare/core/app_header.dart';
+import '../core/widgets/doctor_card.dart';
+import '../core/widgets/date_box.dart';
+import '../core/widgets/time_box.dart';
 import '../data/doctor_data.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,27 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F2),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF01312F),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Wellness",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              "Support for your well-being",
-              style: TextStyle(fontSize: 13, color: Colors.white70),
-            ),
-          ],
-        ),
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

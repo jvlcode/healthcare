@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/doctor_model.dart';
+import '../../models/doctor_model.dart';
 import 'rating_stars.dart';
 
 class DoctorCard extends StatelessWidget {
