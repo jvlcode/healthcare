@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/user/change_password_screen.dart';
+import 'package:healthcare/user/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,13 +37,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Icons.person,
             title: "Edit Profile",
             subtitle: "Update your name, email, and photo",
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
           ),
           _settingsTile(
             icon: Icons.lock,
             title: "Change Password",
             subtitle: "Update your password securely",
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+              );
+            },
           ),
 
           // const SizedBox(height: 20),
