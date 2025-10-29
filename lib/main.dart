@@ -10,11 +10,13 @@ import 'package:healthcare/features/user/dashboard/home_screen.dart';
 import 'package:healthcare/features/user/profile/settings_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  const bool isDoctorMode = true; // 🔁 change to false for user mode
+  runApp(MyApp(isDoctorMode: isDoctorMode));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isDoctorMode;
+  const MyApp({super.key, required this.isDoctorMode});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,7 @@ class MyApp extends StatelessWidget {
       title: 'Healthcare App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      initialRoute: '/',
+      initialRoute: isDoctorMode ? '/doctor/application' : '/',
       routes: {
         // --- User routes ---
         '/': (context) => const MainScaffold(),
