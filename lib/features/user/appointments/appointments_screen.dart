@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:getwidget/getwidget.dart';
-import 'package:healthcare/appointments/videocall_history_screen.dart';
-import 'package:healthcare/doctors/chat_screen.dart';
-import 'package:healthcare/doctors/videocall_screen.dart';
+import 'package:healthcare/features/user/appointments/videocall_history_screen.dart';
+import 'package:healthcare/features/user/doctors/chat_screen.dart';
+import 'package:healthcare/features/user/doctors/videocall_screen.dart';
 import 'package:healthcare/core/app_header.dart';
 
 class AppointmentsScreen extends StatelessWidget {

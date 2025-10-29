@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/user/change_password_screen.dart';
-import 'package:healthcare/user/edit_profile_screen.dart';
+import 'package:healthcare/features/user/profile/change_password_screen.dart';
+import 'package:healthcare/features/user/profile/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

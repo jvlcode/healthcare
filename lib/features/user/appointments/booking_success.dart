@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/appointments/appointments_screen.dart';
+import 'package:healthcare/features/user/appointments/appointments_screen.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
   const BookingSuccessScreen({super.key});

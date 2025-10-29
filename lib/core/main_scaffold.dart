@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/appointments/appointments_screen.dart';
-import 'package:healthcare/dashboard/faq_screen.dart';
-import 'package:healthcare/dashboard/home_screen.dart';
-import 'package:healthcare/doctors/videocall_screen.dart';
+import 'package:healthcare/features/user/appointments/appointments_screen.dart';
+import 'package:healthcare/features/user/dashboard/faq_screen.dart';
+import 'package:healthcare/features/user/dashboard/home_screen.dart';
+import 'package:healthcare/features/user/doctors/videocall_screen.dart';
 import 'package:healthcare/core/app_drawer.dart';
 import 'package:healthcare/core/app_header.dart';
 

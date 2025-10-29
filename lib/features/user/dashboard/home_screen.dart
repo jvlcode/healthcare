@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/appointments/booking_screen.dart';
+import 'package:healthcare/features/user/appointments/booking_screen.dart';
 import 'package:healthcare/core/app_header.dart';
-import '../core/widgets/doctor_card.dart';
-import '../core/widgets/date_box.dart';
-import '../core/widgets/time_box.dart';
-import '../data/doctor_data.dart';
+import '../../../core/widgets/doctor_card.dart';
+import '../../../core/widgets/date_box.dart';
+import '../../../core/widgets/time_box.dart';
+import '../../../data/doctor_data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

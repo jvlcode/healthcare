@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/doctors/doctor_profile_screen.dart';
-import '../core/widgets/doctor_card.dart';
-import '../core/widgets/date_box.dart';
-import '../core/widgets/time_box.dart';
-import '../data/doctor_data.dart';
+import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
+import '../../../core/widgets/doctor_card.dart';
+import '../../../core/widgets/date_box.dart';
+import '../../../core/widgets/time_box.dart';
+import '../../../data/doctor_data.dart';
 import 'booking_success.dart';
 
 class BookingScreen extends StatefulWidget {
