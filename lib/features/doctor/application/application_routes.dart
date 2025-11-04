@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/features/doctor/application/welcome.dart';
+import 'package:healthcare/features/doctor/appointments/appointments_screen.dart';
 import 'package:healthcare/features/doctor/approval_pending_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'step1.dart';
@@ -18,5 +19,6 @@ Map<String, WidgetBuilder> applicationRoutes = {
   '/doctor/apply/review': (context) =>
       const ApplicationStep4ReviewSubmitScreen(),
   '/doctor/apply/status': (context) => const ApprovalPendingScreen(),
-  '/doctor/slot': (context) => const SlotManagementScreen(),
+  '/doctor/slot': (context) => const DoctorSlotManagementScreen(),
+  '/doctor/home': (context) => const DoctorAppointmentsScreen(),
 };

@@ -18,6 +18,7 @@ void main() {
 class MyApp extends StatelessWidget {
   final bool isDoctorMode;
   const MyApp({super.key, required this.isDoctorMode});
+  // ignore: non_constant_identifier_names
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +26,13 @@ class MyApp extends StatelessWidget {
       title: 'Healthcare App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      initialRoute: isDoctorMode ? '/doctor/home' : '/',
+      initialRoute: '/',
       routes: {
         // --- Auth routes ---
         '/login': (context) => const LoginScreen(),
         // '/register': (context) => const Regist(),
         // --- User routes ---
-        '/': (context) => const MainScaffold(),
+        '/': (context) => MainScaffold(isDoctorMode: isDoctorMode),
         '/home': (context) => const HomeScreen(),
         '/appointments': (context) => const AppointmentsScreen(),
         '/faqs': (context) => const FAQScreen(),

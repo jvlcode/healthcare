@@ -21,13 +21,13 @@ class DoctorApplicationWelcomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            Center(
-              child: Image.asset(
-                'assets/images/doctor_welcome.png',
-                height: 180,
-                fit: BoxFit.contain,
-              ),
-            ),
+            // Center(
+            //   child: Image.asset(
+            //     'assets/images/doctor_welcome.png',
+            //     height: 180,
+            //     fit: BoxFit.contain,
+            //   ),
+            // ),
             const SizedBox(height: 30),
             const Text(
               "Welcome, Doctor!",

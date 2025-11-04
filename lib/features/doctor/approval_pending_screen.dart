@@ -46,7 +46,7 @@ class ApprovalPendingScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     // In a real app, check approval status. For demo, go to slots.
-                    Navigator.pushReplacementNamed(context, '/slots');
+                    Navigator.pushReplacementNamed(context, '/');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF01312F),
@@ -55,7 +55,7 @@ class ApprovalPendingScreen extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'Simulate Approved — Go to Slots',
+                    'Simulate Approved',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
