@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/core/app_header.dart';
+import 'package:healthcare/core/layout/app_header.dart';
 
 class FAQScreen extends StatelessWidget {
   const FAQScreen({super.key});

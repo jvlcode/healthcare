@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -68,7 +69,15 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.logout,
                   label: 'Logout',
                   iconColor: Colors.redAccent,
-                  onTap: () => Navigator.pop(context),
+                  onTap: () async {
+                    await SessionManager.clearSession();
+                    // Remove all routes and navigate to login
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                  },
                 ),
               ],
             ),

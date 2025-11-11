@@ -3,7 +3,7 @@ import 'package:getwidget/getwidget.dart';
 import 'package:healthcare/features/user/appointments/videocall_history_screen.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/user/doctors/videocall_screen.dart';
-import 'package:healthcare/core/app_header.dart';
+import 'package:healthcare/core/layout/app_header.dart';
 
 class AppointmentsScreen extends StatelessWidget {
   const AppointmentsScreen({super.key});
