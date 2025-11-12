@@ -6,7 +6,6 @@ class DateBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parts = text.split('\n');
     return Container(
       width: 70,
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -18,12 +17,7 @@ class DateBox extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            parts[0],
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            parts[1],
+            text,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,

@@ -4,7 +4,7 @@ class DoctorService {
   final ApiClient _apiClient = ApiClient();
 
   Future<Map<String, dynamic>> getDoctorList() async {
-    return await _apiClient.get("doctor/list");
+    return await _apiClient.get("doctors");
   }
 
   Future<Map<String, dynamic>> updateDoctorInfo(

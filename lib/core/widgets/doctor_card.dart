@@ -42,18 +42,18 @@ class DoctorCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.network(doctor.image, width: 60, height: 60),
+            Image.network(doctor.profileImageUrl, width: 60, height: 60),
             const SizedBox(height: 8),
             Text(
               doctor.name,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             Text(
-              doctor.role,
+              doctor.specialization,
               style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 6),
-            RatingStars(rating: doctor.rating),
+            RatingStars(rating: doctor.averageRating),
           ],
         ),
       ),
