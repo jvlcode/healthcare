@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/widgets/book_session_btn.dart';
+import 'package:healthcare/features/user/appointments/booking_screen.dart';
+import 'package:healthcare/models/doctor_model.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
-  const DoctorProfileScreen({super.key});
+  final Doctor doctor;
+  const DoctorProfileScreen({super.key, required this.doctor});
 
   @override
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
@@ -9,6 +13,13 @@ class DoctorProfileScreen extends StatefulWidget {
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   int selectedRating = 0;
+  late Doctor doctor;
+
+  @override
+  void initState() {
+    super.initState();
+    doctor = widget.doctor;
+  }
 
   void _showRatingModal(int initialRating) {
     final TextEditingController commentController = TextEditingController();
@@ -126,7 +137,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
@@ -135,14 +146,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.orange.shade100,
-              backgroundImage: const NetworkImage(
-                'https://cdn-icons-png.flaticon.com/512/8815/8815112.png',
-              ),
+              backgroundImage: NetworkImage(doctor.profileImageUrl),
             ),
             const SizedBox(height: 15),
             // Name & Role
-            const Text(
-              "Dr. Yuki Tanaka",
+            Text(
+              doctor.name,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -150,53 +159,71 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              "Psychologist",
+            Text(
+              doctor.specialization,
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 8),
             // Rating
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
-                  "4.8",
+                  doctor.averageRating.toStringAsFixed(1),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 SizedBox(width: 4),
-                Icon(Icons.star, color: Colors.orange, size: 20),
-                Icon(Icons.star, color: Colors.orange, size: 20),
-                Icon(Icons.star, color: Colors.orange, size: 20),
-                Icon(Icons.star, color: Colors.orange, size: 20),
-                Icon(Icons.star, color: Colors.orange, size: 20),
+                ...List.generate(5, (index) {
+                  return Icon(
+                    index < doctor.averageRating.round()
+                        ? Icons.star
+                        : Icons.star_border,
+                    color: Colors.orange,
+                    size: 20,
+                  );
+                }),
               ],
             ),
             const SizedBox(height: 20),
             // Details
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Specialties: Anxiety, Stress",
+                "Specialties: ${doctor.application.specialization}",
+
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 5),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Experience: 10+ years",
+                "Experience: ${doctor.application.experienceYears}+ years",
+
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
+
             const SizedBox(height: 10),
-            const Text(
-              "Empowering clients to achieve mental wellness through evidence-based therapy.",
+            Text(
+              doctor.bio,
               textAlign: TextAlign.left,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.black87,
                 height: 1.4,
               ),
+            ),
+            const SizedBox(height: 25),
+            BookSessionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BookingScreen(doctor: doctor),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 25),
             const Align(
@@ -224,6 +251,48 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 );
               }),
             ),
+            const SizedBox(height: 8),
+            ...doctor.recentReviews.map((review) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Patient name
+                    Text(
+                      review.patient,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Star rating
+                    Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < review.rating
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: Colors.orange,
+                          size: 18,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 4),
+                    // Comment
+                    Text(
+                      review.comment ?? "",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ],
         ),
       ),

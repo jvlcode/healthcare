@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/widgets/book_session_btn.dart';
+import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
-// import 'package:healthcare/features/user/appointments/booking_screen.dart';
+import 'package:healthcare/features/user/appointments/booking_screen.dart';
 import '../../../core/widgets/doctor_card.dart';
 import '../../../core/widgets/date_box.dart';
 import '../../../core/widgets/time_box.dart';
@@ -18,21 +22,28 @@ class _HomeScreenState extends State<HomeScreen> {
   int selectedDoctorIndex = 0;
   final DoctorService _doctorService = DoctorService();
   List<Doctor> doctors = [];
-  bool isLoading = true;
+  bool isLoading = false;
   Future<void> fetchDoctors() async {
-    final response = await _doctorService.getDoctorList();
+    setState(() => isLoading = true);
+    try {
+      final response = await _doctorService.getDoctorList().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException("Request timed out"),
+      );
 
-    if (response['success'] == true && response['data'] is List) {
-      final rawList = response['data'] as List;
-      setState(() {
-        doctors = rawList.map((d) => Doctor.fromJson(d)).toList();
-        isLoading = false;
-      });
-    } else {
-      print("Failed to load doctors: ${response['message']}");
-      setState(() {
-        isLoading = false;
-      });
+      if (response['success'] == true && response['data'] is List) {
+        final rawList = response['data'] as List;
+        setState(() {
+          doctors = rawList.map((d) => Doctor.fromJson(d)).toList();
+          isLoading = false;
+        });
+      } else {
+        print("Failed to load doctors: ${response['message']}");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print("Network or parsing error: $e");
+      setState(() => isLoading = false);
     }
   }
 
@@ -49,14 +60,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (doctors.isEmpty) {
-      return const Scaffold(body: Center(child: Text("No doctors available")));
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("No doctors available"),
+              ElevatedButton(
+                onPressed: fetchDoctors,
+                child: const Text("Retry"),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final doctor = doctors[selectedDoctorIndex];
 
     List<Map<String, dynamic>> groupedSlots = [];
 
-    if (doctor.slots != null && doctor.slots!.isNotEmpty) {
+    if (doctor.slots.isNotEmpty) {
       for (var slot in doctor.slots!) {
         final date = slot.dateLabel;
         final time = slot.startTimeLabel;
@@ -88,51 +112,17 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
 
             // Book Session Button
-            Center(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF6B35),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      offset: const Offset(0, 3),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (_) =>
-                    //         BookingScreen(initialIndex: selectedDoctorIndex),
-                    //   ),
-                    // );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            BookSessionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        BookingScreen(doctor: doctors[selectedDoctorIndex]),
                   ),
-                  child: const Text(
-                    "Book a Session",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+                );
+              },
             ),
-
             const SizedBox(height: 24),
 
             // Doctor Cards Carousel
@@ -150,12 +140,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   doctor: doctors[index],
                   isSelected: index == selectedDoctorIndex,
                   onTap: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (_) => BookingScreen(initialIndex: index),
-                    //   ),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            DoctorProfileScreen(doctor: doctors[index]),
+                      ),
+                    );
                   },
                 ),
               ),

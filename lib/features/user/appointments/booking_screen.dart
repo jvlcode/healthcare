@@ -1,31 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
+import 'package:healthcare/models/doctor_model.dart';
 import '../../../core/widgets/doctor_card.dart';
 import '../../../core/widgets/date_box.dart';
 import '../../../core/widgets/time_box.dart';
 import 'booking_success.dart';
 
 class BookingScreen extends StatefulWidget {
-  final int initialIndex;
-  const BookingScreen({super.key, this.initialIndex = 0});
+  final Doctor doctor;
+
+  const BookingScreen({super.key, required this.doctor});
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  int selectedDoctorIndex = 0;
-  Map<String, String>? selectedSlot;
-
+  late Doctor doctor;
+  Map<String, dynamic>? selectedSlot;
   @override
   void initState() {
     super.initState();
-    selectedDoctorIndex = widget.initialIndex;
+    doctor = widget.doctor;
   }
 
   @override
   Widget build(BuildContext context) {
-    final doctor = doctors[selectedDoctorIndex];
+    List<Map<String, dynamic>> groupedSlots = [];
+
+    if (doctor.slots.isNotEmpty) {
+      for (var slot in doctor.slots!) {
+        final date = slot.dateLabel;
+        final time = slot.startTimeLabel;
+        // final timeLabel = "${slot.startTimeLabel} - ${slot.endTimeLabel}";
+        final slotEntry = {"id": slot.id, "label": time};
+
+        final existing = groupedSlots.firstWhere(
+          (s) => s['date'] == date,
+          orElse: () {
+            final newGroup = {'date': date, 'times': <Map<String, String>>[]};
+            groupedSlots.add(newGroup);
+            return newGroup;
+          },
+        );
+
+        existing['times'].add(slotEntry);
+      }
+    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF01312F),
@@ -43,24 +64,18 @@ class _BookingScreenState extends State<BookingScreen> {
           children: [
             SizedBox(
               height: 180,
-              child: PageView.builder(
-                controller: PageController(
-                  initialPage: selectedDoctorIndex,
-                  viewportFraction: 0.75,
-                ),
-                itemCount: doctors.length,
-                onPageChanged: (i) => setState(() => selectedDoctorIndex = i),
-                itemBuilder: (context, index) => DoctorCard(
-                  doctor: doctors[index],
-                  isSelected: index == selectedDoctorIndex,
-                  showBackgroundHighlight: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => DoctorProfileScreen()),
-                    );
-                  },
-                ),
+              child: DoctorCard(
+                doctor: doctor,
+                isSelected: true,
+                showBackgroundHighlight: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DoctorProfileScreen(doctor: doctor),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 30),
@@ -72,7 +87,7 @@ class _BookingScreenState extends State<BookingScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: doctor.slots!.map<Widget>((slot) {
+                  children: groupedSlots.map<Widget>((slot) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Row(
@@ -87,15 +102,14 @@ class _BookingScreenState extends State<BookingScreen> {
                               children: List<Widget>.from(
                                 slot["times"].map<Widget>(
                                   (t) => TimeBox(
-                                    time: t,
-                                    isSelected:
-                                        selectedSlot?["time"] == t &&
-                                        selectedSlot?["date"] == slot["date"],
+                                    time: t['label'],
+                                    isSelected: selectedSlot?['id'] == t['id'],
                                     onTap: () {
                                       setState(() {
                                         selectedSlot = {
+                                          "id": t["id"],
                                           "date": slot["date"],
-                                          "time": t,
+                                          "label": t["label"],
                                         };
                                       });
                                     },
