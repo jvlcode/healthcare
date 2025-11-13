@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/features/user/appointments/booking_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/services/review_service.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   final Doctor doctor;
@@ -82,16 +83,34 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    selectedRating = tempRating;
-                  });
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Thanks for rating $selectedRating stars!"),
-                    ),
+                onPressed: () async {
+                  final comment = commentController.text.trim();
+                  final reviewService = ReviewService();
+
+                  final result = await reviewService.submitReview(
+                    doctorId: doctor.id, // assuming doctor.id is available
+                    rating: tempRating,
+                    comment: comment,
                   );
+
+                  Navigator.pop(context);
+
+                  if (result['success']) {
+                    setState(() {
+                      selectedRating = tempRating;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Thanks for your review!")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Failed to submit review: ${result['message']}",
+                        ),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
