@@ -1,5 +1,5 @@
 // lib/services/appointment_service.dart
-import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/api_client.dart';
 
 class AppointmentService {
@@ -12,5 +12,17 @@ class AppointmentService {
     final body = {"doctorId": doctorId, "slotId": slotId};
 
     return await _apiClient.post("appointments", body, useAuth: true);
+  }
+
+  Future<List<Appointment>> getUserAppointments() async {
+    final res = await _apiClient.get("appointments", useAuth: true);
+    print(res);
+    if (res['success'] == true && res['data'] is List) {
+      return (res['data'] as List)
+          .map((json) => Appointment.fromJson(json))
+          .toList();
+    } else {
+      throw Exception(res['message'] ?? 'Failed to fetch appointments');
+    }
   }
 }

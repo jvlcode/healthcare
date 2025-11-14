@@ -4,9 +4,10 @@ class Doctor {
   final String id;
   final String name;
   final String specialization;
-  final String profileImageUrl;
-  final double averageRating;
-  final List<SlotModel> slots;
+  final String profileImageUrl; // ✅ optional
+  final double averageRating; // ✅ optional
+  final List<Slot> slots; // ✅ optional
+
   final DoctorApplication application;
   final String bio;
   final List<ReviewModel> recentReviews;
@@ -31,16 +32,29 @@ class Doctor {
       profileImageUrl: json["user"]["profileImageUrl"],
       averageRating: (json["averageRating"] ?? 0).toDouble(),
       application: DoctorApplication.fromJson(json["application"]),
-      slots: (json["slots"] as List).map((s) => SlotModel.fromJson(s)).toList(),
+      slots: (json["slots"] as List).map((s) => Slot.fromJson(s)).toList(),
       bio: json["bio"] ?? "",
       recentReviews: (json["recentReviews"] as List)
           .map((r) => ReviewModel.fromJson(r))
           .toList(),
     );
   }
+  factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
+    return Doctor(
+      id: json['doctor']["_id"],
+      name: json['doctor']["application"]["fullName"],
+      specialization: json['doctor']["application"]["specialization"],
+      profileImageUrl: json['user']["profileImage"],
+      averageRating: 0,
+      slots: [],
+      application: DoctorApplication.fromJson(json['doctor']["application"]),
+      bio: json['doctor']["bio"] ?? "",
+      recentReviews: [],
+    );
+  }
 }
 
-class SlotModel {
+class Slot {
   final String id;
   final DateTime date;
   final String startTime;
@@ -49,7 +63,7 @@ class SlotModel {
   final String startTimeLabel;
   final String endTimeLabel;
 
-  SlotModel({
+  Slot({
     required this.id,
     required this.date,
     required this.startTime,
@@ -59,9 +73,9 @@ class SlotModel {
     required this.endTimeLabel,
   });
 
-  factory SlotModel.fromJson(Map<String, dynamic> json) {
-    return SlotModel(
-      id: json["_id"],
+  factory Slot.fromJson(Map<String, dynamic> json) {
+    return Slot(
+      id: json["_id"] ?? json["id"], // support both _id and id
       date: DateTime.parse(json["date"]),
       startTime: json["startTime"],
       endTime: json["endTime"],

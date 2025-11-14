@@ -147,7 +147,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           },
         ),
         title: Text(
-          "${doctor.name}'s Profile",
+          "${doctor.name} Profile",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
