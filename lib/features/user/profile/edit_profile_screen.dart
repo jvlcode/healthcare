@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/models/user_model.dart';
+import 'package:healthcare/services/user_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
@@ -11,20 +15,13 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController(
-    text: "Dr. Yuki Tanaka",
-  );
-  final TextEditingController _emailController = TextEditingController(
-    text: "yuki.tanaka@email.com",
-  );
-  final TextEditingController _phoneController = TextEditingController(
-    text: "+91 98765 43210",
-  );
-  final TextEditingController _bioController = TextEditingController(
-    text: "Psychologist with 10+ years of experience.",
-  );
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
 
   File? _profileImage;
+  String _profileImageUrl = '';
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -36,12 +33,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  void _saveChanges() {
+  final _userService = UserService();
+
+  void _saveChanges() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
-      Navigator.pop(context);
+      try {
+        final res = await _userService.updateProfile(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          bio: _bioController.text.trim(),
+          profileImage: _profileImage,
+        );
+
+        if (res['success'] == true) {
+          final updatedUser = User.fromJson(res['data']);
+          await SessionManager.updateUser(updatedUser);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Profile updated successfully!")),
+          );
+          Navigator.pop(context);
+        } else {
+          throw Exception(res['message']);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final user = await SessionManager.getCurrentUser();
+    if (user != null && mounted) {
+      setState(() {
+        _nameController.text = user.name ?? '';
+        _emailController.text = user.email ?? '';
+        _phoneController.text = user.phone ?? '';
+        _bioController.text = user.bio ?? '';
+        _profileImageUrl = ImageUtils.resolve(user.profileImage);
+      });
     }
   }
 
@@ -77,10 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundColor: Colors.grey[300],
                       backgroundImage: _profileImage != null
                           ? FileImage(_profileImage!)
-                          : const NetworkImage(
-                                  'https://cdn-icons-png.flaticon.com/512/8815/8815112.png',
-                                )
-                                as ImageProvider,
+                          : NetworkImage(_profileImageUrl),
                     ),
                     Positioned(
                       bottom: 0,

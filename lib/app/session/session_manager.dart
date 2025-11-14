@@ -41,6 +41,11 @@ class SessionManager {
     return null;
   }
 
+  static Future<void> updateUser(User updatedUser) async {
+    final userBox = await Hive.openBox('userBox');
+    await userBox.put('user', updatedUser.toJson());
+  }
+
   static Future<bool> refreshAccessToken() async {
     final refreshToken = await getRefreshToken();
     if (refreshToken == null) return false;

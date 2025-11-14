@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/constants/urls.dart';
 import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
-  static const String baseUrl = "http://192.168.1.5:4000/api/v1";
+  static const String baseUrl = AppUrls.apiUrl;
 
   final Map<String, String> defaultHeaders = {
     "Content-Type": "application/json",
@@ -65,6 +69,59 @@ class ApiClient {
       final res = await http.get(uri, headers: headers);
       final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
       if (res.statusCode >= 200 && res.statusCode < 300) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Request failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> multipartPut(
+    String path, {
+    required Map<String, String> fields,
+    File? file,
+    String fileField = 'profileImage',
+    bool useAuth = false,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path");
+    final request = http.MultipartRequest('PUT', uri);
+
+    if (useAuth) {
+      final token = await getAuthToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+    }
+
+    request.fields.addAll(fields);
+
+    if (file != null) {
+      final mimeType = lookupMimeType(file.path) ?? 'image/jpeg';
+      final fileStream = http.ByteStream(file.openRead());
+      final length = await file.length();
+
+      request.files.add(
+        http.MultipartFile(
+          fileField,
+          fileStream,
+          length,
+          filename: file.path.split('/').last,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return {'success': true, 'data': data};
       } else {
         return {

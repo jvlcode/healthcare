@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/image_util.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  String? name;
+  String? email;
+  String? profileImage;
+
+  @override
+  void initState() {
+    super.initState();
+    loadUser();
+  }
+
+  Future<void> loadUser() async {
+    final user = await SessionManager.getCurrentUser();
+    if (user != null && mounted) {
+      setState(() {
+        name = user.name;
+        email = user.email;
+        profileImage = ImageUtils.resolve(user.profileImage);
+      });
+      print(profileImage);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,17 +44,19 @@ class AppDrawer extends StatelessWidget {
 
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 30, color: Color(0xFF01312F)),
+                  backgroundImage: NetworkImage(
+                    profileImage ?? ImageUtils.fallbackUrl,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      'Logesh',
+                      name ?? 'Loading...',
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: 18,
@@ -34,7 +64,7 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'logesh@example.com',
+                      email ?? '',
                       style: TextStyle(color: Colors.black45, fontSize: 14),
                     ),
                   ],

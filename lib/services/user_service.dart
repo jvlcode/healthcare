@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'api_client.dart';
 
 class UserService {
@@ -7,7 +9,20 @@ class UserService {
     return await _apiClient.get("user/profile");
   }
 
-  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async {
-    return await _apiClient.post("user/update", body);
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String email,
+    required String phone,
+    required String bio,
+    File? profileImage,
+  }) async {
+    final fields = {'name': name, 'email': email, 'phone': phone, 'bio': bio};
+
+    return await _apiClient.multipartPut(
+      'users/me',
+      fields: fields,
+      file: profileImage,
+      useAuth: true,
+    );
   }
 }
