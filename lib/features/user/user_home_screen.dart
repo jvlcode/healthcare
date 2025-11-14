@@ -14,6 +14,20 @@ class UserHomeScreen extends StatefulWidget {
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
   int _currentIndex = 0;
+  bool _initializedFromArgs = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_initializedFromArgs) {
+      final arg = ModalRoute.of(context)?.settings.arguments;
+      if (arg is int && arg >= 0 && arg < _screens.length) {
+        _currentIndex = arg;
+      }
+      _initializedFromArgs = true; // ✅ Prevent reapplying on back swipe
+    }
+  }
 
   final List<Widget> _screens = const [
     HomeScreen(),

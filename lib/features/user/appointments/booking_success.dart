@@ -166,10 +166,11 @@ class BookingSuccessScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacementNamed(
+                      Navigator.pushNamedAndRemoveUntil(
                         context,
-                        '/',
-                        arguments: 1, // 1 = Bookings tab
+                        '/user',
+                        (route) => false, // removes all previous routes
+                        arguments: 1,
                       );
                     },
                     style: ElevatedButton.styleFrom(

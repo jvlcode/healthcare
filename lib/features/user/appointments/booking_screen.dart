@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/services/appoinment_service.dart';
 import '../../../core/widgets/doctor_card.dart';
 import '../../../core/widgets/date_box.dart';
 import '../../../core/widgets/time_box.dart';
@@ -128,13 +129,26 @@ class _BookingScreenState extends State<BookingScreen> {
             ElevatedButton(
               onPressed: selectedSlot == null
                   ? null
-                  : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const BookingSuccessScreen(),
-                        ),
+                  : () async {
+                      final appointmentService = AppointmentService();
+                      final res = await appointmentService.createAppointment(
+                        doctorId: doctor.id,
+                        slotId: selectedSlot!['id'],
                       );
+
+                      if (res['success'] == true) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BookingSuccessScreen(),
+                          ),
+                        );
+                      } else {
+                        final msg = res['message'] ?? 'Booking failed';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text("Error: $msg")));
+                      }
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
