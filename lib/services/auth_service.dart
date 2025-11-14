@@ -51,4 +51,12 @@ class AuthService {
   Future<Map<String, dynamic>> validateAccessToken() async {
     return await _apiClient.get("users/me", useAuth: true);
   }
+
+  /// ✅ Server reachability check using `/ping` endpoint
+  Future<bool> isServerReachable() async {
+    final result = await _apiClient.get("ping", useAuth: false);
+    return result['success'] == true &&
+        result['data'] is Map &&
+        result['data']['status'] == 'ok';
+  }
 }

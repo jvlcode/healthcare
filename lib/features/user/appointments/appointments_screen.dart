@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:getwidget/getwidget.dart';
+import 'package:healthcare/core/widgets/retry_loader.dart';
 import 'package:healthcare/features/user/appointments/videocall_history_screen.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/user/doctors/videocall_screen.dart';
@@ -27,9 +30,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Future<void> _loadAppointments() async {
+    setState(() => isLoading = true);
     try {
       final service = AppointmentService();
-      final data = await service.getUserAppointments();
+      final data = await service.getUserAppointments().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw TimeoutException("Request timed out"),
+      );
+
       setState(() {
         bookings = data;
         isLoading = false;
@@ -59,7 +67,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    print(bookings);
+    // print(bookings);
+
+    if (bookings.isEmpty) {
+      return Scaffold(
+        body: RetryLoader(
+          isLoading: isLoading,
+          hasError: bookings.isEmpty,
+          errorMessage: "No appointments available",
+          onRetry: _loadAppointments,
+          child: const SizedBox(), // placeholder, won't be shown
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F2),

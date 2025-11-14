@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
+import 'package:healthcare/core/widgets/retry_loader.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
@@ -27,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => isLoading = true);
     try {
       final response = await _doctorService.getDoctorList().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 5),
         onTimeout: () => throw TimeoutException("Request timed out"),
       );
 
@@ -55,23 +56,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (doctors.isEmpty) {
+    if (isLoading || doctors.isEmpty) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("No doctors available"),
-              ElevatedButton(
-                onPressed: fetchDoctors,
-                child: const Text("Retry"),
-              ),
-            ],
-          ),
+        body: RetryLoader(
+          isLoading: isLoading,
+          hasError: doctors.isEmpty,
+          errorMessage: "No doctors available loader",
+          onRetry: fetchDoctors,
+          child: const SizedBox(), // placeholder, won't be shown
         ),
       );
     }

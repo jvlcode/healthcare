@@ -51,8 +51,15 @@ class SessionManager {
     if (result['success'] == true) {
       final data = result['data'];
       final newAccessToken = data['accessToken'];
+      final newRefreshToken = data['refreshToken'];
       if (newAccessToken != null) {
         await _secureStorage.write(key: 'access_token', value: newAccessToken);
+        if (newRefreshToken != null) {
+          await _secureStorage.write(
+            key: 'refresh_token',
+            value: newRefreshToken,
+          );
+        }
         return true;
       }
     }
@@ -60,42 +67,72 @@ class SessionManager {
     return false;
   }
 
-  static Future<User?> initializeSession() async {
-    final accessToken = await _secureStorage.read(key: 'access_token');
-    final refreshToken = await _secureStorage.read(key: 'refresh_token');
+  /// Fast startup: returns cached user immediately.
+  /// Validates token in background unless [validateInBackground] is false.
+  static Future<User?> initializeSession({
+    bool validateInBackground = true,
+  }) async {
+    final accessToken = await getAccessToken();
+    final refreshToken = await getRefreshToken();
+    final user = await getCurrentUser();
 
-    final userBox = await Hive.openBox('userBox');
-    final userJson = userBox.get('user');
+    if (accessToken == null || user == null) return null;
 
-    if (accessToken == null || userJson == null) return null;
+    if (validateInBackground) {
+      Future.microtask(() async {
+        final authService = AuthService();
+        final reachable = await authService.isServerReachable();
 
-    final authService = AuthService();
-    final result = await authService.validateAccessToken();
-    if (result['success'] == true) {
-      return User.fromJson(Map<String, dynamic>.from(userJson));
-    }
-
-    if (result['message'] == 'TOKEN_EXPIRED' && refreshToken != null) {
-      print("Access token expired. Attempting refresh...");
-      final refreshResult = await authService.refreshToken(refreshToken);
-      if (refreshResult['success'] == true) {
-        final newAccessToken = refreshResult['data']['accessToken'];
-        final newRefreshToken = refreshResult['data']['refreshToken'];
-        if (newAccessToken != null) {
-          await _secureStorage.write(
-            key: 'access_token',
-            value: newAccessToken,
-          );
-          await _secureStorage.write(
-            key: 'refresh_token',
-            value: newRefreshToken,
-          );
-          return User.fromJson(Map<String, dynamic>.from(userJson));
+        if (!reachable) {
+          print("⚠️ Skipping token validation — server unreachable");
+          return;
         }
-      }
+
+        try {
+          final result = await authService.validateAccessToken();
+
+          if (result['success'] == true) return;
+
+          if (result['message'] == 'TOKEN_EXPIRED' && refreshToken != null) {
+            final refreshed = await refreshAccessToken();
+            if (refreshed) return;
+          }
+
+          await clearSession(); // only if token is invalid
+        } catch (e) {
+          print("⚠️ Token validation failed: $e");
+        }
+      });
+
+      return user;
     }
 
-    await SessionManager.clearSession();
-    return null;
+    // Strict validation (e.g. protected screens)
+    final authService = AuthService();
+    final reachable = await authService.isServerReachable();
+
+    if (!reachable) {
+      print(
+        "⚠️ Server unreachable during strict validation — using cached session",
+      );
+      return user;
+    }
+
+    try {
+      final result = await authService.validateAccessToken();
+
+      if (result['success'] == true) return user;
+
+      if (result['message'] == 'TOKEN_EXPIRED' && refreshToken != null) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed) return user;
+      }
+
+      await clearSession();
+      return null;
+    } catch (e) {
+      print("⚠️ Token validation failed: $e");
+      return user;
+    }
   }
 }
