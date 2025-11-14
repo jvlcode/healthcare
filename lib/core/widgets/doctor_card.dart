@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/utils/image_util.dart';
 import '../../models/doctor_model.dart';
 import 'rating_stars.dart';
 
@@ -42,7 +43,11 @@ class DoctorCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.network(doctor.profileImageUrl, width: 60, height: 60),
+            Image.network(
+              ImageUtils.resolve(doctor.profileImageUrl),
+              width: 60,
+              height: 60,
+            ),
             const SizedBox(height: 8),
             Text(
               doctor.name,

@@ -1,4 +1,5 @@
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/services/patient_model.dart';
 
 class Appointment {
   final String id;
@@ -7,6 +8,7 @@ class Appointment {
   final DateTime createdAt;
   final Doctor doctor;
   final Slot slot;
+  final Patient patient;
 
   Appointment({
     required this.id,
@@ -15,6 +17,7 @@ class Appointment {
     required this.createdAt,
     required this.doctor,
     required this.slot,
+    required this.patient,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
@@ -26,6 +29,7 @@ class Appointment {
         createdAt: DateTime.parse(json['createdAt']),
         doctor: Doctor.fromAppointmentJson(json),
         slot: Slot.fromJson(json['slot']),
+        patient: Patient.fromJson(json['user']),
       );
     } catch (e, stack) {
       print('❌ Failed to parse Appointment: $e');

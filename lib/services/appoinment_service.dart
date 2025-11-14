@@ -25,4 +25,16 @@ class AppointmentService {
       throw Exception(res['message'] ?? 'Failed to fetch appointments');
     }
   }
+
+  Future<bool> updateAppointmentStatus({
+    required String appointmentId,
+    required String status, // "CONFIRMED" or "CANCELLED"
+  }) async {
+    final res = await _apiClient.patch(
+      "appointments/$appointmentId/status",
+      data: {"status": status},
+      useAuth: true,
+    );
+    return res['success'] == true;
+  }
 }

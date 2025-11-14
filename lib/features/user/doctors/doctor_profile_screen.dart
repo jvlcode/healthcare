@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/features/user/appointments/booking_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
@@ -165,7 +166,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.orange.shade100,
-              backgroundImage: NetworkImage(doctor.profileImageUrl),
+              backgroundImage: NetworkImage(
+                ImageUtils.resolve(doctor.profileImageUrl),
+              ),
             ),
             const SizedBox(height: 15),
             // Name & Role
