@@ -146,8 +146,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             Navigator.pop(context);
           },
         ),
-        title: const Text(
-          "Profile",
+        title: Text(
+          "${doctor.name}'s Profile",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,

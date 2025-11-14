@@ -41,4 +41,14 @@ class AuthService {
       'newPassword': newPassword,
     });
   }
+
+  Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+    return await _apiClient.post("auth/refresh", {
+      "refreshToken": refreshToken,
+    });
+  }
+
+  Future<Map<String, dynamic>> validateAccessToken() async {
+    return await _apiClient.get("users/me", useAuth: true);
+  }
 }
