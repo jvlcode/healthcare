@@ -36,7 +36,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     return Scaffold(
       appBar: AppHeader(subtitle: "Your patient care dashboard"),
       drawer: const AppDrawer(),
-      body: _screens[_currentIndex],
+      body: IndexedStack(children: _screens, index: _currentIndex),
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),

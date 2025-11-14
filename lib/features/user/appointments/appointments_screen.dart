@@ -20,7 +20,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   List<Appointment> bookings = [];
   bool isLoading = true;
   String? error;
-
+  @override
   @override
   void initState() {
     super.initState();

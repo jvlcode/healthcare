@@ -50,7 +50,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     return Scaffold(
       appBar: AppHeader(subtitle: "Your support for well-being"),
       drawer: const AppDrawer(),
-      body: _screens[_currentIndex],
+      body: IndexedStack(index: _currentIndex, children: _screens),
+
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
