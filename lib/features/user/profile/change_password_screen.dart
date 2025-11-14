@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/services/user_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -19,12 +20,29 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _newObscure = true;
   bool _confirmObscure = true;
 
-  void _savePassword() {
+  final _userService = UserService();
+
+  void _savePassword() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Password changed successfully!")),
-      );
-      Navigator.pop(context);
+      try {
+        final res = await _userService.changePassword(
+          oldPassword: _oldPasswordController.text.trim(),
+          newPassword: _newPasswordController.text.trim(),
+        );
+
+        if (res['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Password changed successfully!")),
+          );
+          Navigator.pop(context);
+        } else {
+          throw Exception(res['message']);
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      }
     }
   }
 

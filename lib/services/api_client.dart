@@ -133,4 +133,39 @@ class ApiClient {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? data,
+    bool useAuth = false,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path");
+    final headers = Map<String, String>.from(defaultHeaders);
+
+    if (useAuth) {
+      final token = await getAuthToken();
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+    }
+
+    try {
+      final res = await http.patch(
+        uri,
+        headers: headers,
+        body: jsonEncode(data ?? {}),
+      );
+      final responseData = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Request failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

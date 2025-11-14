@@ -25,4 +25,15 @@ class UserService {
       useAuth: true,
     );
   }
+
+  Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    return await _apiClient.patch(
+      'users/change-password',
+      data: {'oldPassword': oldPassword, 'newPassword': newPassword},
+      useAuth: true,
+    );
+  }
 }
