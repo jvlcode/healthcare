@@ -23,6 +23,33 @@ class AppointmentCard extends StatelessWidget {
     required this.actionButtons,
   });
 
+  Widget _buildSubtitle(String subtitle) {
+    // format: "25|Fever and headache"  (age|reason)
+    final parts = subtitle.split('|');
+    final text1 = parts.isNotEmpty ? parts[0] : "";
+    final text2 = parts.length > 1 ? parts[1] : "";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (text1.isNotEmpty)
+          Text(
+            "$text1",
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        if (text2.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            "$text2",
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -60,10 +87,7 @@ class AppointmentCard extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                    if (subtitle.isNotEmpty) _buildSubtitle(subtitle),
                   ],
                 ),
               ),

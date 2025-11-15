@@ -9,6 +9,8 @@ class Appointment {
   final Doctor doctor;
   final Slot slot;
   final Patient patient;
+  final String age;
+  final String reason;
 
   Appointment({
     required this.id,
@@ -18,6 +20,8 @@ class Appointment {
     required this.doctor,
     required this.slot,
     required this.patient,
+    required this.age,
+    required this.reason,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,8 @@ class Appointment {
         id: json['_id'],
         status: json['status'],
         amount: json['amount'],
+        age: json['age'] ?? "Unknown",
+        reason: json['reason'] ?? "Unknown",
         createdAt: DateTime.parse(json['createdAt']),
         doctor: Doctor.fromAppointmentJson(json),
         slot: Slot.fromJson(json['slot']),

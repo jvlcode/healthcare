@@ -19,10 +19,133 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   late Doctor doctor;
   Map<String, dynamic>? selectedSlot;
+  final TextEditingController ageController = TextEditingController();
+  final TextEditingController reasonController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     doctor = widget.doctor;
+  }
+
+  Future<bool?> _showExtraInfoForm() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "Additional Information",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              // AGE
+              TextField(
+                controller: ageController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Age",
+                  prefixIcon: const Icon(Icons.cake_outlined),
+                  filled: true,
+                  fillColor: const Color(0xFFFFF3E9),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // REASON
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: "Reason for Visit",
+                  prefixIcon: const Icon(Icons.medical_services_outlined),
+                  filled: true,
+                  fillColor: const Color(0xFFFFF3E9),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  hintText: "Describe your symptoms",
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // BUTTONS
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      child: const Text("Cancel"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (ageController.text.isEmpty ||
+                            reasonController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Age & Reason are required"),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(context, true);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B35),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "Continue",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -130,10 +253,16 @@ class _BookingScreenState extends State<BookingScreen> {
               onPressed: selectedSlot == null
                   ? null
                   : () async {
+                      final bool? canProceed = await _showExtraInfoForm();
+
+                      if (canProceed != true) return;
+
                       final appointmentService = AppointmentService();
                       final res = await appointmentService.createAppointment(
                         doctorId: doctor.id,
                         slotId: selectedSlot!['id'],
+                        age: ageController.text,
+                        reason: reasonController.text,
                       );
 
                       if (res['success'] == true) {
@@ -150,6 +279,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         ).showSnackBar(SnackBar(content: Text("Error: $msg")));
                       }
                     },
+
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
                 padding: const EdgeInsets.symmetric(vertical: 14),

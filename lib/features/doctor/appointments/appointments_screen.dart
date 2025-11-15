@@ -99,7 +99,8 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
               ),
 
               title: booking.patient.name,
-              subtitle: "", // doctor view shows only name
+              subtitle:
+                  "Age: ${booking.age}|Reason: ${booking.reason}", // doctor view shows only name
               status: booking.status,
               statusColor: color,
 

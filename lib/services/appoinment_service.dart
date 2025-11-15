@@ -1,4 +1,6 @@
 // lib/services/appointment_service.dart
+import 'dart:collection';
+
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/api_client.dart';
 
@@ -8,8 +10,15 @@ class AppointmentService {
   Future<Map<String, dynamic>> createAppointment({
     required String doctorId,
     required String slotId,
+    required String age,
+    required String reason,
   }) async {
-    final body = {"doctorId": doctorId, "slotId": slotId};
+    final body = {
+      "doctorId": doctorId,
+      "slotId": slotId,
+      "age": age,
+      "reason": reason,
+    };
 
     return await _apiClient.post("appointments", body, useAuth: true);
   }
