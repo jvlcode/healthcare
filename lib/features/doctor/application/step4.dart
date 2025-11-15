@@ -1,28 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/models/doctor_application_form_model.dart';
+import 'package:healthcare/services/doctor_service.dart';
+import 'package:hive/hive.dart';
 
 class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
-  // Sample data passed from previous steps
-  final Map<String, dynamic> personalInfo;
-  final Map<String, dynamic> clinicInfo;
-  final List<String> uploadedFiles;
+  const ApplicationStep4ReviewSubmitScreen({super.key});
 
-  const ApplicationStep4ReviewSubmitScreen({
-    super.key,
-    this.personalInfo = const {
-      'name': 'John Doe',
-      'email': 'john@example.com',
-      'phone': '+91 9876543210',
-    },
-    this.clinicInfo = const {
-      'clinicName': 'Care Health',
-      'address': '123 Main Street',
-      'specialization': 'Cardiology',
-    },
-    this.uploadedFiles = const ['certificate1.pdf', 'id_proof.png'],
-  });
+  Future<void> _submitApplication(BuildContext context) async {
+    final box = Hive.box<DoctorApplicationForm>('doctor_application');
+    final form = box.get('draft');
+
+    if (form == null || form.isSubmitted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No application to submit.")),
+      );
+      return;
+    }
+
+    try {
+      final doctorService = DoctorService();
+
+      // Submit application using the service
+      final result = await doctorService.submitApplication(
+        personalInfo: form.step1PersonalInfo ?? {},
+        clinicInfo: form.step2ClinicInfo ?? {},
+        documents: form.step3Documents ?? [],
+      );
+
+      print("FORM $result");
+
+      if (result['success'] == true) {
+        form.isSubmitted = true;
+        await form.save();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Application Submitted Successfully!")),
+        );
+
+        // Redirect to application status screen
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.doctorApplyStatus,
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Submission failed: ${result['message'] ?? 'Unknown error'}",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error submitting application: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final box = Hive.box<DoctorApplicationForm>('doctor_application');
+    final form = box.get('draft');
+    final personalInfo = form?.step1PersonalInfo ?? {};
+    final clinicInfo = form?.step2ClinicInfo ?? {};
+    final uploadedFiles = form?.step3Documents ?? [];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Step 4: Review & Submit"),
@@ -59,9 +104,9 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text("Name: ${personalInfo['name']}"),
-                    Text("Email: ${personalInfo['email']}"),
-                    Text("Phone: ${personalInfo['phone']}"),
+                    Text("Name: ${personalInfo['fullName'] ?? ''}"),
+                    Text("Email: ${personalInfo['email'] ?? ''}"),
+                    Text("Phone: ${personalInfo['phone'] ?? ''}"),
                   ],
                 ),
               ),
@@ -87,9 +132,11 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text("Clinic Name: ${clinicInfo['clinicName']}"),
-                    Text("Address: ${clinicInfo['address']}"),
-                    Text("Specialization: ${clinicInfo['specialization']}"),
+                    Text("Clinic Name: ${clinicInfo['clinicName'] ?? ''}"),
+                    Text("Address: ${clinicInfo['clinicAddress'] ?? ''}"),
+                    Text(
+                      "Specialization: ${clinicInfo['specialization'] ?? ''}",
+                    ),
                   ],
                 ),
               ),
@@ -124,7 +171,7 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    file,
+                                    file['name'] ?? '',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -166,19 +213,7 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Application Submitted Successfully!"),
-                      ),
-                    );
-                    // Navigator.pushNamed(context, '/doctor/apply/status');
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/doctor/apply/status',
-                      (route) => false,
-                    );
-                  },
+                  onPressed: () => _submitApplication(context),
                   child: const Text(
                     "Submit",
                     style: TextStyle(

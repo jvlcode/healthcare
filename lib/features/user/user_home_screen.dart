@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
 import 'package:healthcare/features/user/dashboard/home_screen.dart';
-import 'package:healthcare/features/user/appointments/appointments_screen.dart';
+import 'package:healthcare/features/user/appointments/user_appointments_screen.dart';
 import 'package:healthcare/features/user/dashboard/faq_screen.dart';
 
 class UserHomeScreen extends StatefulWidget {
@@ -31,7 +31,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    AppointmentsScreen(),
+    UserAppointmentsScreen(),
     FAQScreen(),
   ];
 

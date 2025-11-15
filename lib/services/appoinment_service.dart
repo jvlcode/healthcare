@@ -25,7 +25,7 @@ class AppointmentService {
 
   Future<List<Appointment>> getUserAppointments() async {
     final res = await _apiClient.get("appointments", useAuth: true);
-    print(res);
+    // print("[Appointment Service] $res");
     if (res['success'] == true && res['data'] is List) {
       return (res['data'] as List)
           .map((json) => Appointment.fromJson(json))

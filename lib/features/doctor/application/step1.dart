@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/app_routes.dart';
+import 'package:hive/hive.dart';
+import 'package:healthcare/models/doctor_application_form_model.dart';
 
 class ApplicationStep1PersonalInfoScreen extends StatefulWidget {
   const ApplicationStep1PersonalInfoScreen({super.key});
@@ -11,10 +14,36 @@ class ApplicationStep1PersonalInfoScreen extends StatefulWidget {
 class _ApplicationStep1PersonalInfoScreenState
     extends State<ApplicationStep1PersonalInfoScreen> {
   final _formKey = GlobalKey<FormState>();
-  String name = '', email = '', phone = '';
+
+  String fullName = '';
+  String email = '';
+  String phone = '';
+  String qualification = '';
+  String specialization = '';
+  String experienceYears = '';
 
   bool get isFormFilled =>
-      name.isNotEmpty && email.isNotEmpty && phone.isNotEmpty;
+      fullName.isNotEmpty && email.isNotEmpty && phone.isNotEmpty;
+
+  Future<void> _saveToHive() async {
+    final box = Hive.box<DoctorApplicationForm>('doctor_application');
+    final form = box.get('draft') ?? DoctorApplicationForm();
+
+    form.step1PersonalInfo = {
+      'fullName': fullName,
+      'email': email,
+      'phone': phone,
+
+      // backend-required fields
+      'qualifications': qualification,
+      'specialization': specialization,
+
+      // FIXED → convert to number
+      'experienceYears': int.tryParse(experienceYears) ?? 0,
+    };
+
+    await box.put('draft', form);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +60,7 @@ class _ApplicationStep1PersonalInfoScreenState
           child: Column(
             children: [
               const Text(
-                "Please fill in your personal information",
+                "Please provide your personal details",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
@@ -39,9 +68,10 @@ class _ApplicationStep1PersonalInfoScreenState
                 ),
                 textAlign: TextAlign.center,
               ),
+
               const SizedBox(height: 30),
 
-              // Name field
+              // FULL NAME
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -56,11 +86,7 @@ class _ApplicationStep1PersonalInfoScreenState
                       icon: Icon(Icons.person),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        name = val;
-                      });
-                    },
+                    onChanged: (val) => setState(() => fullName = val),
                     validator: (val) =>
                         val!.isEmpty ? "Please enter your name" : null,
                   ),
@@ -68,7 +94,7 @@ class _ApplicationStep1PersonalInfoScreenState
               ),
               const SizedBox(height: 20),
 
-              // Email field
+              // EMAIL
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -83,20 +109,58 @@ class _ApplicationStep1PersonalInfoScreenState
                       icon: Icon(Icons.email),
                       border: InputBorder.none,
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    onChanged: (val) {
-                      setState(() {
-                        email = val;
-                      });
+                    onChanged: (val) => setState(() => email = val),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return "Please enter your email";
+                      }
+                      if (!RegExp(
+                        r"^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$",
+                      ).hasMatch(val)) {
+                        return "Enter a valid email";
+                      }
+                      return null;
                     },
-                    validator: (val) =>
-                        val!.isEmpty ? "Please enter your email" : null,
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Phone field
+              // PHONE — FIXED 10 digits validation
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextFormField(
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: "Phone Number",
+                      hintText: "9876543210",
+                      icon: Icon(Icons.phone),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (val) => setState(() => phone = val.trim()),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return "Please enter phone number";
+                      }
+                      if (val.length < 10) {
+                        return "Phone must be at least 10 digits";
+                      }
+                      if (!RegExp(r"^[0-9]+$").hasMatch(val)) {
+                        return "Phone must contain only digits";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // QUALIFICATION
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -106,49 +170,90 @@ class _ApplicationStep1PersonalInfoScreenState
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
                     decoration: const InputDecoration(
-                      labelText: "Phone Number",
-                      hintText: "+91 9876543210",
-                      icon: Icon(Icons.phone),
+                      labelText: "Qualification (MBBS, MD...)",
+                      icon: Icon(Icons.school),
                       border: InputBorder.none,
                     ),
-                    keyboardType: TextInputType.phone,
-                    onChanged: (val) {
-                      setState(() {
-                        phone = val;
-                      });
-                    },
-                    validator: (val) =>
-                        val!.isEmpty ? "Please enter phone number" : null,
+                    onChanged: (val) => setState(() => qualification = val),
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+
+              // SPECIALIZATION
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: "Specialization",
+                      icon: Icon(Icons.medical_services),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (val) => setState(() => specialization = val),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // EXPERIENCE — FIXED: MUST BE NUMBER
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextFormField(
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Years of Experience",
+                      icon: Icon(Icons.timeline),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (val) => setState(() => experienceYears = val),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return null;
+                      if (int.tryParse(val) == null) {
+                        return "Experience must be a number";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 40),
 
-              // Next button (only enabled when all fields are filled)
+              // NEXT BUTTON
               if (isFormFilled)
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF01312F),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF01312F),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
                     ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _formKey.currentState!.save();
-                        Navigator.pushNamed(context, '/doctor/apply/clinic');
-                      }
-                    },
-                    child: const Text(
-                      "Next",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, // Bright text
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      await _saveToHive();
+                      Navigator.pushNamed(context, AppRoutes.doctorApplyClinic);
+                    }
+                  },
+                  child: const Text(
+                    "Next",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

@@ -10,13 +10,13 @@ import 'package:healthcare/features/user/doctors/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
 
-class AppointmentsScreen extends StatefulWidget {
-  const AppointmentsScreen({super.key});
+class UserAppointmentsScreen extends StatefulWidget {
+  const UserAppointmentsScreen({super.key});
   @override
-  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+  State<UserAppointmentsScreen> createState() => _UserAppointmentsScreenState();
 }
 
-class _AppointmentsScreenState extends State<AppointmentsScreen> {
+class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   List<Appointment> bookings = [];
   bool isLoading = true;
   String? error;

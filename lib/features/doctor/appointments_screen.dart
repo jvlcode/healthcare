@@ -52,7 +52,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'confirmed':
+      case 'accepted':
         return Colors.green;
       case 'pending':
         return Colors.orange;
@@ -114,7 +114,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                     Expanded(
                       child: GFButton(
                         onPressed: () =>
-                            handleStatusUpdate(booking.id, "CONFIRMED"),
+                            handleStatusUpdate(booking.id, "ACCEPTED"),
                         text: "Accept",
                         color: Colors.green,
                         shape: GFButtonShape.pills,
@@ -130,7 +130,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                         shape: GFButtonShape.pills,
                       ),
                     ),
-                  ] else if (booking.status.toLowerCase() == 'confirmed') ...[
+                  ] else if (booking.status.toLowerCase() == 'accepted') ...[
                     Expanded(
                       child: GFButton(
                         onPressed: () => Navigator.push(

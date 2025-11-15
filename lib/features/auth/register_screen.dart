@@ -144,11 +144,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text.trim();
 
     try {
-      // final res = await http.post(
-      //   uri,
-      //   headers: {"Content-Type": "application/json"},
-      //   body: jsonEncode(body),
-      // );
       final authService = AuthService();
       final res = await authService.register(user, password);
 

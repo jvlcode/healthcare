@@ -29,4 +29,24 @@ class DoctorService {
       useAuth: true,
     );
   }
+
+  /// 🔹 Get doctor verification status
+  Future<Map<String, dynamic>> getDoctorStatus(String userId) async {
+    return await _apiClient.get("doctor/status/$userId", useAuth: true);
+  }
+
+  // 🔹 Submit doctor application
+  Future<Map<String, dynamic>> submitApplication({
+    required Map<String, dynamic> personalInfo,
+    required Map<String, dynamic> clinicInfo,
+    required List<Map<String, String>> documents,
+  }) async {
+    final payload = {
+      "personalInfo": personalInfo,
+      "clinicInfo": clinicInfo,
+      "documents": documents,
+    };
+
+    return await _apiClient.post("doctors/apply", payload, useAuth: true);
+  }
 }

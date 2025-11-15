@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/features/doctor/application/welcome.dart';
-import 'package:healthcare/features/doctor/appointments/appointments_screen.dart';
+import 'package:healthcare/features/doctor/appointments_screen.dart';
 import 'package:healthcare/features/doctor/approval_pending_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'step1.dart';
@@ -9,7 +9,7 @@ import 'step3.dart';
 import 'step4.dart';
 
 Map<String, WidgetBuilder> applicationRoutes = {
-  '/doctor/apply/welcome': (context) => const DoctorApplicationWelcomeScreen(),
+  '/doctor/apply': (context) => const DoctorApplicationWelcomeScreen(),
   '/doctor/apply/personal': (context) =>
       const ApplicationStep1PersonalInfoScreen(),
   '/doctor/apply/clinic': (context) =>

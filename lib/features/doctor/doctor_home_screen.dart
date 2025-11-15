@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
-import 'package:healthcare/features/doctor/appointments/appointments_screen.dart';
+import 'package:healthcare/features/doctor/appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'package:healthcare/features/user/dashboard/faq_screen.dart'; // If doctor also needs FAQ
 

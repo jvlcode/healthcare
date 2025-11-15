@@ -7,8 +7,9 @@ class Doctor {
   final String profileImageUrl; // ✅ optional
   final double averageRating; // ✅ optional
   final List<Slot> slots; // ✅ optional
+  final bool approved;
 
-  final DoctorApplication application;
+  final Application application;
   final String bio;
   final List<ReviewModel> recentReviews;
 
@@ -22,6 +23,7 @@ class Doctor {
     required this.slots,
     required this.bio,
     required this.recentReviews,
+    required this.approved,
   });
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
@@ -31,12 +33,13 @@ class Doctor {
       specialization: json["application"]["specialization"],
       profileImageUrl: json["user"]["profileImageUrl"],
       averageRating: (json["averageRating"] ?? 0).toDouble(),
-      application: DoctorApplication.fromJson(json["application"]),
+      application: Application.fromJson(json["application"]),
       slots: (json["slots"] as List).map((s) => Slot.fromJson(s)).toList(),
       bio: json["bio"] ?? "",
       recentReviews: (json["recentReviews"] as List)
           .map((r) => ReviewModel.fromJson(r))
           .toList(),
+      approved: json["approved"] ?? false,
     );
   }
   factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
@@ -47,21 +50,23 @@ class Doctor {
       profileImageUrl: json['user']["profileImage"],
       averageRating: 0,
       slots: [],
-      application: DoctorApplication.fromJson(json['doctor']["application"]),
+      application: Application.fromJson(json['doctor']["application"]),
       bio: json['doctor']["bio"] ?? "",
       recentReviews: [],
+      approved: json['doctor']["approved"],
     );
   }
 }
 
 class Slot {
-  final String id;
-  final DateTime date;
-  final String startTime;
-  final String endTime;
-  final String dateLabel;
-  final String startTimeLabel;
-  final String endTimeLabel;
+  String id;
+  DateTime date;
+  String startTime;
+  String endTime;
+  String dateLabel;
+  String startTimeLabel;
+  String endTimeLabel;
+  bool available;
 
   Slot({
     required this.id,
@@ -71,6 +76,7 @@ class Slot {
     required this.dateLabel,
     required this.startTimeLabel,
     required this.endTimeLabel,
+    required this.available,
   });
 
   factory Slot.fromJson(Map<String, dynamic> json) {
@@ -82,11 +88,30 @@ class Slot {
       dateLabel: json["dateLabel"],
       startTimeLabel: json["startTimeLabel"],
       endTimeLabel: json["endTimeLabel"],
+      available: json["available"] ?? false,
+    );
+  }
+  Slot copyWith({
+    String? id,
+    String? startTime,
+    String? endTime,
+    String? startTimeLabel,
+    String? endTimeLabel,
+  }) {
+    return Slot(
+      id: id ?? this.id,
+      date: date,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      startTimeLabel: startTimeLabel ?? this.startTimeLabel,
+      endTimeLabel: endTimeLabel ?? this.endTimeLabel,
+      dateLabel: dateLabel,
+      available: available,
     );
   }
 }
 
-class DoctorApplication {
+class Application {
   final String fullName;
   final String email;
   final String phone;
@@ -97,7 +122,7 @@ class DoctorApplication {
   final String clinicAddress;
   final List<DocumentModel> documents;
 
-  DoctorApplication({
+  Application({
     required this.fullName,
     required this.email,
     required this.phone,
@@ -109,8 +134,8 @@ class DoctorApplication {
     required this.documents,
   });
 
-  factory DoctorApplication.fromJson(Map<String, dynamic> json) {
-    return DoctorApplication(
+  factory Application.fromJson(Map<String, dynamic> json) {
+    return Application(
       fullName: json["fullName"],
       email: json["email"],
       phone: json["phone"],
@@ -156,4 +181,18 @@ class ReviewModel {
     patient: json["patient"],
     createdAt: DateTime.parse(json["createdAt"]),
   );
+}
+
+class DoctorStatus {
+  final bool hasApplied;
+  final bool approved;
+
+  DoctorStatus({required this.hasApplied, required this.approved});
+
+  factory DoctorStatus.fromJson(Map<String, dynamic> json) {
+    return DoctorStatus(
+      hasApplied: json['hasApplied'] ?? false,
+      approved: json['approved'] ?? false,
+    );
+  }
 }

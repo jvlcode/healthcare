@@ -40,6 +40,7 @@ class ApiClient {
         headers: headers,
         body: jsonEncode(body),
       );
+      print(res.body);
       final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
       if (res.statusCode >= 200 && res.statusCode < 300) {
         return {'success': true, 'data': data};
@@ -50,12 +51,22 @@ class ApiClient {
         };
       }
     } catch (e) {
+      print(e);
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> get(String path, {bool useAuth = false}) async {
-    final uri = Uri.parse("$baseUrl/$path");
+  Future<Map<String, dynamic>> get(
+    String path, {
+    bool useAuth = false,
+    Map<String, dynamic>? queryParams,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path").replace(
+      queryParameters: queryParams?.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    );
+
     final headers = Map<String, String>.from(defaultHeaders);
 
     if (useAuth) {
@@ -166,6 +177,131 @@ class ApiClient {
       }
     } catch (e) {
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> put(
+    String path,
+    Map<String, dynamic>? data, {
+    bool useAuth = false,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path");
+    final headers = Map<String, String>.from(defaultHeaders);
+
+    if (useAuth) {
+      final token = await getAuthToken();
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+    }
+
+    try {
+      final res = await http.put(
+        uri,
+        headers: headers,
+        body: jsonEncode(data ?? {}),
+      );
+
+      final responseData = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Request failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    bool useAuth = false,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path");
+    final headers = Map<String, String>.from(defaultHeaders);
+
+    if (useAuth) {
+      final token = await getAuthToken();
+      if (token != null) {
+        headers["Authorization"] = "Bearer $token";
+      }
+    }
+
+    try {
+      final res = await http.delete(uri, headers: headers);
+      final responseData = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Request failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> postMultipart(
+    String path,
+    File file, {
+    String fieldName = "file",
+    bool useAuth = false,
+    Map<String, String>? fields,
+  }) async {
+    final uri = Uri.parse("$baseUrl/$path");
+
+    final request = http.MultipartRequest("POST", uri);
+
+    // Auth header
+    if (useAuth) {
+      final token = await getAuthToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+    }
+
+    // Additional form fields
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    // Prepare file
+    final mimeType = lookupMimeType(file.path) ?? "application/octet-stream";
+    final fileStream = http.ByteStream(file.openRead());
+    final fileLength = await file.length();
+
+    request.files.add(
+      http.MultipartFile(
+        fieldName,
+        fileStream,
+        fileLength,
+        filename: file.path.split('/').last,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {"success": true, "data": data};
+      } else {
+        return {
+          "success": false,
+          "message": data["message"] ?? "Upload failed",
+        };
+      }
+    } catch (e) {
+      return {"success": false, "message": e.toString()};
     }
   }
 }
