@@ -44,7 +44,7 @@ class DoctorCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.network(
-              ImageUtils.resolve(doctor.profileImageUrl),
+              ImageUtils.resolve(doctor.profileImage),
               width: 60,
               height: 60,
             ),

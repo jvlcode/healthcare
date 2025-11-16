@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
+import 'package:healthcare/core/widgets/offline_banner.dart';
 import 'package:healthcare/features/doctor/appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
-import 'package:healthcare/features/user/dashboard/faq_screen.dart'; // If doctor also needs FAQ
+import 'package:healthcare/features/user/faq_screen.dart'; // If doctor also needs FAQ
 
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
 import 'package:healthcare/features/doctor/appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
-import 'package:healthcare/features/user/dashboard/faq_screen.dart';
-import 'package:healthcare/features/doctor/application_status_screen.dart';
+import 'package:healthcare/features/user/faq_screen.dart';
+import 'package:healthcare/features/doctor/application/application_status_screen.dart';
 import 'package:healthcare/services/doctor_service.dart';
+import 'package:provider/provider.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -25,8 +28,19 @@ class DoctorHomeScreen extends StatefulWidget {
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   int _currentIndex = 0;
 
-  List<Widget> _screens = [];
-  List<BottomNavigationBarItem> _navItems = [];
+  List<Widget> _screens = [
+    DoctorAppointmentsScreen(),
+    DoctorSlotManagementScreen(),
+    FAQScreen(),
+  ];
+  List<BottomNavigationBarItem> _navItems = [
+    BottomNavigationBarItem(
+      icon: Icon(Icons.calendar_month_outlined),
+      label: 'Appointments',
+    ),
+    BottomNavigationBarItem(icon: Icon(Icons.more_time), label: 'Slots'),
+    BottomNavigationBarItem(icon: Icon(Icons.help), label: 'FAQs'),
+  ];
 
   bool _loading = true;
   bool _isPending = false;
@@ -34,42 +48,32 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStatus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final isReachable = context
+        .read<ReachabilityController>()
+        .isServerReachable;
+
+    if (isReachable && _loading) {
+      _loadStatus();
+    }
   }
 
   Future<void> _loadStatus() async {
     final doctorService = DoctorService();
 
     final res = await doctorService.getApplicationStatus();
-    print("APP status $res");
 
     if (!mounted) return;
-
     final status = res['success'] == true ? res['data']['status'] : "approved";
 
     // ------- HANDLE PENDING OR REJECTED -------
     if (status == "pending" || status == "rejected") {
       _isPending = true;
-
-      _screens = const [
-        ApplicationStatusScreen(),
-        DoctorAppointmentsScreen(),
-        DoctorSlotManagementScreen(),
-        FAQScreen(),
-      ];
-
-      _navItems = const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.info_outline),
-          label: "App Status",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_month_outlined),
-          label: 'Appointments',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.more_time), label: 'Slots'),
-        BottomNavigationBarItem(icon: Icon(Icons.help), label: 'FAQs'),
-      ];
     } else if (status == "not_started") {
       Navigator.pushReplacementNamed(context, AppRoutes.doctorApply);
       return;
@@ -77,21 +81,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     // ------- ALLOW FULL APP AFTER APPROVAL -------
     else {
       _isPending = false;
-
-      _screens = const [
-        DoctorAppointmentsScreen(),
-        DoctorSlotManagementScreen(),
-        FAQScreen(),
-      ];
-
-      _navItems = const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_month_outlined),
-          label: 'Appointments',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.more_time), label: 'Slots'),
-        BottomNavigationBarItem(icon: Icon(Icons.help), label: 'FAQs'),
-      ];
     }
 
     setState(() {
@@ -102,15 +91,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    final isOffline = !context
+        .watch<ReachabilityController>()
+        .isServerReachable;
 
     return Scaffold(
       appBar: AppHeader(subtitle: "Your patient care dashboard"),
       drawer: const AppDrawer(),
-      body: IndexedStack(children: _screens, index: _currentIndex),
+      body: Column(
+        children: [
+          if (isOffline) const OfflineBanner(), // ✅ show banner if offline
+          Expanded(
+            child: IndexedStack(children: _screens, index: _currentIndex),
+          ),
+        ],
+      ),
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),

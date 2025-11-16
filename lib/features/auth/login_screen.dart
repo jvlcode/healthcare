@@ -53,8 +53,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await _authService.login(email, password);
 
       if (res['success'] == true) {
-        // Extract data safely
         final data = res['data'] as Map<String, dynamic>?;
+
         if (data == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Invalid login response")),
@@ -67,28 +67,35 @@ class _LoginScreenState extends State<LoginScreen> {
         final refreshToken = data['refreshToken']?.toString() ?? '';
 
         if (userJson != null && accessToken != null) {
-          final user = User.fromJson(userJson);
+          User? user;
 
-          // Save session
-          // await SessionManager.saveSession(user, accessToken, refreshToken);
+          try {
+            user = User.fromJson(userJson);
+          } catch (e, stack) {
+            print("❌ User parsing failed: $e");
+            print(stack);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Login failed: Invalid user data")),
+            );
+            return;
+          }
+
           final secureStorage = FlutterSecureStorage();
           await secureStorage.write(key: 'access_token', value: accessToken);
           await secureStorage.write(key: 'refresh_token', value: refreshToken);
 
           final userBox = await Hive.openBox('userBox');
-          await userBox.put('user', data['user']); // Ensure User has toJson()
+          await userBox.put('user', data['user']);
 
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text("Login successful")));
 
-          // Navigate based on role
           if (user.role.toUpperCase() == 'DOCTOR') {
             Navigator.pushReplacementNamed(context, AppRoutes.doctorHome);
           } else {
             Navigator.pushReplacementNamed(context, AppRoutes.userHome);
           }
-          // Navigator.pushReplacementNamed(context, '/');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Invalid login credentials")),

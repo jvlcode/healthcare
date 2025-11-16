@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app.dart';
+import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/widgets/splash_screen.dart';
 import 'package:healthcare/models/doctor_application_form_model.dart';
@@ -7,6 +8,7 @@ import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 
 class SessionBootstrapper extends StatefulWidget {
   const SessionBootstrapper({super.key});
@@ -27,13 +29,9 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
   }
 
   Future<void> bootstrap() async {
+    bool validateInBackground = true;
     print("🔵 BOOTSTRAP STARTED");
 
-    // Register adapters if needed
-    // Hive.registerAdapter(DoctorApplicationAdapter());
-    // Hive.registerAdapter(UserAdapter());
-
-    // OPEN ALL REQUIRED BOXES BEFORE ANY ROUTING
     await Hive.openBox('auth');
     await Hive.deleteBoxFromDisk('doctor_application');
     await Hive.openBox('doctor_application');
@@ -41,22 +39,31 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
 
     print("🟢 Hive Boxes Opened");
 
-    // Now safely initialize session
-    user = await SessionManager.initializeSession(validateInBackground: true);
+    // ✅ Check server first
+    final reachable = await AuthService().isServerReachable();
+    Provider.of<ReachabilityController>(
+      context,
+      listen: false,
+    ).updateReachability(reachable);
 
-    print("🟢 Session Loaded, user: $user");
+    if (!reachable) {
+      validateInBackground = false;
+      print("⚠️ Server unreachable — skipping session init");
+      if (!mounted) return;
+    }
+
+    // ✅ Safe to initialize session now
+    try {
+      user = await SessionManager.initializeSession(
+        validateInBackground: validateInBackground,
+      );
+      print("🟢 Session Loaded, user: ${user?.toJson()}");
+    } catch (e) {
+      print("❌ Session init failed: $e");
+    }
 
     if (!mounted) return;
     setState(() => isLoading = false);
-
-    // Optional server reachability check
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final reachable = await AuthService().isServerReachable();
-      if (!reachable && mounted) {
-        setState(() => serverUnreachable = true);
-        print("⚠️ Server unreachable — using offline session");
-      }
-    });
   }
 
   @override

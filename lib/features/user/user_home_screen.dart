@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
-import 'package:healthcare/features/user/user_home_screen/home_screen.dart';
+import 'package:healthcare/features/user/find_doctor.dart';
 import 'package:healthcare/features/user/user_appointments_screen.dart';
-import 'package:healthcare/features/user/user_home_screen/faq_screen.dart';
+import 'package:healthcare/features/user/faq_screen.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});

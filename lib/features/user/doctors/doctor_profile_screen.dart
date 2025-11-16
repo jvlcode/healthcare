@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
-import 'package:healthcare/features/user/appointments/booking_screen.dart';
+import 'package:healthcare/features/user/booking/booking_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/review_service.dart';
 
@@ -167,7 +167,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               radius: 50,
               backgroundColor: Colors.orange.shade100,
               backgroundImage: NetworkImage(
-                ImageUtils.resolve(doctor.profileImageUrl),
+                ImageUtils.resolve(doctor.profileImage),
               ),
             ),
             const SizedBox(height: 15),

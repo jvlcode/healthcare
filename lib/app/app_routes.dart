@@ -8,7 +8,7 @@ import 'package:healthcare/features/auth/reset_password.dart';
 
 // Doctor
 import 'package:healthcare/features/doctor/doctor_home_screen.dart';
-import 'package:healthcare/features/doctor/application_status_screen.dart';
+import 'package:healthcare/features/doctor/application/application_status_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'package:healthcare/features/doctor/application/welcome.dart';
 import 'package:healthcare/features/doctor/application/step1.dart';
@@ -18,10 +18,10 @@ import 'package:healthcare/features/doctor/application/step4.dart';
 
 // User
 import 'package:healthcare/features/user/user_home_screen.dart';
-import 'package:healthcare/features/user/appointments/user_appointments_screen.dart';
-import 'package:healthcare/features/user/appointments/videocall_history_screen.dart';
-import 'package:healthcare/features/user/dashboard/faq_screen.dart';
-import 'package:healthcare/features/user/profile/settings_screen.dart';
+import 'package:healthcare/features/user/user_appointments_screen.dart';
+import 'package:healthcare/features/user/videocall_history_screen.dart';
+import 'package:healthcare/features/user/faq_screen.dart';
+import 'package:healthcare/features/shared/settings_screen.dart';
 
 class AppRoutes {
   // Auth

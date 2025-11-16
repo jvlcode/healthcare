@@ -10,6 +10,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // print("MYAPP ${user?.toJson()}");
     final initialRoute = user == null
         ? AppRoutes.login
         : user!.role.toUpperCase() == 'DOCTOR'

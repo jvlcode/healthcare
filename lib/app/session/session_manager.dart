@@ -82,17 +82,9 @@ class SessionManager {
     final user = await getCurrentUser();
 
     if (accessToken == null || user == null) return null;
-
+    final authService = AuthService();
     if (validateInBackground) {
       Future.microtask(() async {
-        final authService = AuthService();
-        final reachable = await authService.isServerReachable();
-
-        if (!reachable) {
-          print("⚠️ Skipping token validation — server unreachable");
-          return;
-        }
-
         try {
           final result = await authService.validateAccessToken();
 
@@ -108,36 +100,7 @@ class SessionManager {
           print("⚠️ Token validation failed: $e");
         }
       });
-
-      return user;
     }
-
-    // Strict validation (e.g. protected screens)
-    final authService = AuthService();
-    final reachable = await authService.isServerReachable();
-
-    if (!reachable) {
-      print(
-        "⚠️ Server unreachable during strict validation — using cached session",
-      );
-      return user;
-    }
-
-    try {
-      final result = await authService.validateAccessToken();
-
-      if (result['success'] == true) return user;
-
-      if (result['message'] == 'TOKEN_EXPIRED' && refreshToken != null) {
-        final refreshed = await refreshAccessToken();
-        if (refreshed) return user;
-      }
-
-      await clearSession();
-      return null;
-    } catch (e) {
-      print("⚠️ Token validation failed: $e");
-      return user;
-    }
+    return user;
   }
 }

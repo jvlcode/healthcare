@@ -29,7 +29,7 @@ class User {
     role: json['role'],
     profileImage: json['profileImage'],
     bio: json['bio'],
-    doctor: json['doctor'] != null ? Doctor.fromJson(json['doctor']) : null,
+    doctor: json['doctor'] != null ? Doctor.fromUserJson(json) : null,
   );
 
   Map<String, dynamic> toJson() => {

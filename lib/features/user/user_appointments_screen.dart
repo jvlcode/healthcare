@@ -1,14 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
+import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
-import 'package:healthcare/core/widgets/retry_loader.dart';
-import 'package:healthcare/features/user/appointments/videocall_history_screen.dart';
+import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/user/doctors/videocall_screen.dart';
+import 'package:healthcare/features/user/videocall_history_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
+import 'package:provider/provider.dart';
 
 class UserAppointmentsScreen extends StatefulWidget {
   const UserAppointmentsScreen({super.key});
@@ -17,28 +21,39 @@ class UserAppointmentsScreen extends StatefulWidget {
 }
 
 class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
+  late StreamSubscription<bool> _sub;
   List<Appointment> bookings = [];
-  bool isLoading = true;
-  String? error;
-  @override
+  bool _loading = true;
+  String? _error;
   @override
   void initState() {
     super.initState();
-    _loadAppointments();
+    _loadAppointments(); // fetch doctors on screen load
+    final reach = context.read<ReachabilityController>();
+    _sub = reach.reachabilityStream.listen((isReachable) {
+      if (isReachable) {
+        _loadAppointments(); // fetch doctors on screen load
+      }
+    });
   }
 
   Future<void> _loadAppointments() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
       final service = AppointmentService();
       final data = await service.getUserAppointments();
       setState(() {
         bookings = data;
-        isLoading = false;
+        _loading = false;
       });
     } catch (e) {
       setState(() {
-        error = e.toString();
-        isLoading = false;
+        _error = e.toString();
+        _loading = false;
       });
     }
   }
@@ -58,13 +73,22 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (error != null || bookings.isEmpty) {
-      return RetryLoader(
-        isLoading: isLoading,
-        hasError: error != null,
-        errorMessage: error ?? "No appointments found",
-        onRetry: _loadAppointments,
-        child: const SizedBox(),
+    return ServerGuard(onRetry: _loadAppointments, child: _buildMainUI());
+  }
+
+  Widget _buildMainUI() {
+    // if (_loading) {
+    //   return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // }
+
+    if (_error != null || bookings.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            _error ?? "No appointments found",
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+        ),
       );
     }
 
@@ -77,9 +101,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
             "Appointments",
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 12),
-
           ...bookings.map((booking) {
             final statusColor = _statusColor(booking.status);
 
@@ -87,19 +109,16 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
               avatar: CircleAvatar(
                 radius: 28,
                 backgroundImage: NetworkImage(
-                  ImageUtils.resolve(booking.doctor.profileImageUrl),
+                  ImageUtils.resolve(booking.doctor.profileImage),
                 ),
               ),
-
               title: booking.doctor.application.personalInfo.fullName,
               subtitle: booking.doctor.specialization,
               status: booking.status,
               statusColor: statusColor,
-
               date: booking.slot.dateLabel,
               timeRange:
                   "${booking.slot.startTimeLabel} - ${booking.slot.endTimeLabel}",
-
               actionButtons: Row(
                 children: [
                   Expanded(
@@ -137,7 +156,6 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
           }),
         ],
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,

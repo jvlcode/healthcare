@@ -52,11 +52,18 @@ class AuthService {
     return await _apiClient.get("users/me", useAuth: true);
   }
 
-  /// ✅ Server reachability check using `/ping` endpoint
   Future<bool> isServerReachable() async {
-    final result = await _apiClient.get("ping", useAuth: false);
-    return result['success'] == true &&
-        result['data'] is Map &&
-        result['data']['status'] == 'ok';
+    try {
+      final result = await _apiClient
+          .get("ping", useAuth: false)
+          .timeout(const Duration(seconds: 2));
+
+      return result['success'] == true &&
+          result['data'] is Map &&
+          result['data']['status'] == 'ok';
+    } catch (e) {
+      print("❌ Server reachability check failed: $e");
+      return false;
+    }
   }
 }
