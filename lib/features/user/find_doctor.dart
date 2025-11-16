@@ -6,20 +6,20 @@ import 'package:healthcare/core/widgets/retry_loader.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
-import 'package:healthcare/features/user/appointments/booking_screen.dart';
+import 'package:healthcare/features/user/booking_screen.dart';
 import '../../../core/widgets/doctor_card.dart';
 import '../../../core/widgets/date_box.dart';
 import '../../../core/widgets/time_box.dart';
 // import '../../../data/doctor_data.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class FindDoctor extends StatefulWidget {
+  const FindDoctor({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<FindDoctor> createState() => _FindDoctorState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _FindDoctorState extends State<FindDoctor> {
   int selectedDoctorIndex = 0;
   final DoctorService _doctorService = DoctorService();
   List<Doctor> doctors = [];
