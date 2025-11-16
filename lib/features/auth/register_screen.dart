@@ -135,6 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     final user = User(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),

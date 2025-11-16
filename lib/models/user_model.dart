@@ -1,7 +1,7 @@
 import 'package:healthcare/models/doctor_model.dart';
 
 class User {
-  final String? id;
+  final String id;
   final String name;
   final String email;
   final String phone;
@@ -11,7 +11,7 @@ class User {
   final Doctor? doctor; // optional
 
   User({
-    this.id,
+    required this.id,
     required this.name,
     required this.email,
     required this.phone,
@@ -33,7 +33,7 @@ class User {
   );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    '_id': id,
     'name': name,
     'email': email,
     'phone': phone,

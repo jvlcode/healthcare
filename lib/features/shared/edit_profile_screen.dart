@@ -35,6 +35,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> loadUserData() async {
     final user = await SessionManager.getCurrentUser();
+    print("EDIT $user");
     if (user != null && mounted) {
       setState(() {
         _nameController.text = user.name ?? '';

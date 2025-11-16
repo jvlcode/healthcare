@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/services/slot_service.dart';
@@ -55,8 +56,8 @@ class _DoctorSlotManagementScreenState
     });
 
     try {
-      final res = await service.getSlotList("6915ffdd11f70d575e38edfb");
-
+      final user = await SessionManager.getCurrentUser();
+      final res = await service.getSlotList(user!.doctor!.id);
       if (res['success'] == true) {
         final raw = List<Map<String, dynamic>>.from(res['data']);
         final slots = raw.map((e) => Slot.fromJson(e)).toList();
