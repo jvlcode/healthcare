@@ -3,6 +3,7 @@ import 'package:healthcare/app/app.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/widgets/splash_screen.dart';
 import 'package:healthcare/models/doctor_application_form_model.dart';
+import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:hive/hive.dart';
@@ -31,14 +32,11 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
     // Register adapters if needed
     // Hive.registerAdapter(DoctorApplicationAdapter());
     // Hive.registerAdapter(UserAdapter());
-    Hive.registerAdapter(
-      DoctorApplicationFormAdapter(),
-    ); // <-- register adapter
 
     // OPEN ALL REQUIRED BOXES BEFORE ANY ROUTING
     await Hive.openBox('auth');
-    // await Hive.deleteBoxFromDisk('doctor_application');
-    await Hive.openBox<DoctorApplicationForm>('doctor_application');
+    await Hive.deleteBoxFromDisk('doctor_application');
+    await Hive.openBox('doctor_application');
     await Hive.openBox('settings');
 
     print("🟢 Hive Boxes Opened");

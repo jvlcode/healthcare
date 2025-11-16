@@ -91,7 +91,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
                 ),
               ),
 
-              title: booking.doctor.application.fullName,
+              title: booking.doctor.application.personalInfo.fullName,
               subtitle: booking.doctor.specialization,
               status: booking.status,
               statusColor: statusColor,

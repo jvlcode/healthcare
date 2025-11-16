@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     final initialRoute = user == null
         ? AppRoutes.login
         : user!.role.toUpperCase() == 'DOCTOR'
-        ? AppRoutes.doctorWrapper
+        ? AppRoutes.doctorHome
         : AppRoutes.userHome;
 
     return MaterialApp(

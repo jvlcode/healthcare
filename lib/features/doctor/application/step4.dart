@@ -8,10 +8,11 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
   const ApplicationStep4ReviewSubmitScreen({super.key});
 
   Future<void> _submitApplication(BuildContext context) async {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
+    final box = Hive.box('doctor_application');
     final form = box.get('draft');
 
-    if (form == null || form.isSubmitted) {
+    if (form == null) {
+      // print(form?.toJson());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("No application to submit.")),
       );
@@ -41,7 +42,7 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
         // Redirect to application status screen
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.doctorApplyStatus,
+          AppRoutes.doctorHome,
           (route) => false,
         );
       } else {

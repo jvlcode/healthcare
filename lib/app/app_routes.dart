@@ -8,8 +8,7 @@ import 'package:healthcare/features/auth/reset_password.dart';
 
 // Doctor
 import 'package:healthcare/features/doctor/doctor_home_screen.dart';
-import 'package:healthcare/features/doctor/approval_pending_screen.dart';
-import 'package:healthcare/features/doctor/doctor_wrapper.dart';
+import 'package:healthcare/features/doctor/application_status_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'package:healthcare/features/doctor/application/welcome.dart';
 import 'package:healthcare/features/doctor/application/step1.dart';
@@ -64,14 +63,14 @@ class AppRoutes {
     settings: (context) => SettingsScreen(),
 
     // Doctor
-    doctorWrapper: (context) => DoctorWrapper(),
+    // doctorWrapper: (context) => DoctorWrapper(),
     doctorHome: (context) => DoctorHomeScreen(),
     doctorApply: (context) => DoctorApplicationWelcomeScreen(),
     doctorApplyPersonal: (context) => ApplicationStep1PersonalInfoScreen(),
     doctorApplyClinic: (context) => ApplicationStep2ClinicDetailsScreen(),
     doctorApplyDocuments: (context) => ApplicationStep3DocumentUploadScreen(),
     doctorApplyReview: (context) => ApplicationStep4ReviewSubmitScreen(),
-    doctorApplyStatus: (context) => ApprovalPendingScreen(),
+    doctorApplyStatus: (context) => ApplicationStatusScreen(),
     doctorSlot: (context) => DoctorSlotManagementScreen(),
   };
 }

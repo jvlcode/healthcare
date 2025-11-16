@@ -49,4 +49,8 @@ class DoctorService {
 
     return await _apiClient.post("doctors/apply", payload, useAuth: true);
   }
+
+  Future<Map<String, dynamic>> getApplicationStatus() async {
+    return await _apiClient.get("doctors/application/status", useAuth: true);
+  }
 }

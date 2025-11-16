@@ -1,4 +1,5 @@
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/services/patient_model.dart';
 
 class Appointment {

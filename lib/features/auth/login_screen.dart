@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
@@ -75,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
           await secureStorage.write(key: 'refresh_token', value: refreshToken);
 
           final userBox = await Hive.openBox('userBox');
-          await userBox.put('user', user.toJson()); // Ensure User has toJson()
+          await userBox.put('user', data['user']); // Ensure User has toJson()
 
           ScaffoldMessenger.of(
             context,
@@ -83,9 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Navigate based on role
           if (user.role.toUpperCase() == 'DOCTOR') {
-            Navigator.pushReplacementNamed(context, '/doctor');
+            Navigator.pushReplacementNamed(context, AppRoutes.doctorHome);
           } else {
-            Navigator.pushReplacementNamed(context, '/user');
+            Navigator.pushReplacementNamed(context, AppRoutes.userHome);
           }
           // Navigator.pushReplacementNamed(context, '/');
         } else {

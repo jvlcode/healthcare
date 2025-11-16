@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/services/slot_service.dart';
 import 'package:intl/intl.dart';
 

@@ -1,5 +1,8 @@
 // models/doctor_model.dart
 
+import 'package:healthcare/models/review_model.dart';
+import 'package:healthcare/models/slot_model.dart';
+
 class Doctor {
   final String id;
   final String name;
@@ -11,7 +14,7 @@ class Doctor {
 
   final Application application;
   final String bio;
-  final List<ReviewModel> recentReviews;
+  final List<Review> recentReviews;
 
   Doctor({
     required this.id,
@@ -29,24 +32,28 @@ class Doctor {
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
       id: json["_id"],
-      name: json["application"]["fullName"],
-      specialization: json["application"]["specialization"],
-      profileImageUrl: json["user"]["profileImageUrl"],
+      name: json["application"]["personalInfo"]["fullName"],
+      specialization: json["specialization"],
+      profileImageUrl: json["profileImageUrl"] ?? "", // Injected manually
       averageRating: (json["averageRating"] ?? 0).toDouble(),
       application: Application.fromJson(json["application"]),
-      slots: (json["slots"] as List).map((s) => Slot.fromJson(s)).toList(),
+      slots: (json["slots"] is List)
+          ? (json["slots"] as List).map((s) => Slot.fromJson(s)).toList()
+          : [],
       bio: json["bio"] ?? "",
-      recentReviews: (json["recentReviews"] as List)
-          .map((r) => ReviewModel.fromJson(r))
-          .toList(),
+      recentReviews: (json["recentReviews"] is List)
+          ? (json["recentReviews"] as List)
+                .map((r) => Review.fromJson(r))
+                .toList()
+          : [],
       approved: json["approved"] ?? false,
     );
   }
   factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
     return Doctor(
       id: json['doctor']["_id"],
-      name: json['doctor']["application"]["fullName"],
-      specialization: json['doctor']["application"]["specialization"],
+      name: json['doctor']["application"]["personalInfo"]["fullName"],
+      specialization: json['doctor']["specialization"],
       profileImageUrl: json['user']["profileImage"],
       averageRating: 0,
       slots: [],
@@ -58,95 +65,64 @@ class Doctor {
   }
 }
 
-class Slot {
-  String id;
-  DateTime date;
-  String startTime;
-  String endTime;
-  String dateLabel;
-  String startTimeLabel;
-  String endTimeLabel;
-  bool available;
-
-  Slot({
-    required this.id,
-    required this.date,
-    required this.startTime,
-    required this.endTime,
-    required this.dateLabel,
-    required this.startTimeLabel,
-    required this.endTimeLabel,
-    required this.available,
-  });
-
-  factory Slot.fromJson(Map<String, dynamic> json) {
-    return Slot(
-      id: json["_id"] ?? json["id"], // support both _id and id
-      date: DateTime.parse(json["date"]),
-      startTime: json["startTime"],
-      endTime: json["endTime"],
-      dateLabel: json["dateLabel"],
-      startTimeLabel: json["startTimeLabel"],
-      endTimeLabel: json["endTimeLabel"],
-      available: json["available"] ?? false,
-    );
-  }
-  Slot copyWith({
-    String? id,
-    String? startTime,
-    String? endTime,
-    String? startTimeLabel,
-    String? endTimeLabel,
-  }) {
-    return Slot(
-      id: id ?? this.id,
-      date: date,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      startTimeLabel: startTimeLabel ?? this.startTimeLabel,
-      endTimeLabel: endTimeLabel ?? this.endTimeLabel,
-      dateLabel: dateLabel,
-      available: available,
-    );
-  }
-}
-
 class Application {
-  final String fullName;
-  final String email;
-  final String phone;
-  final String qualifications;
-  final String specialization;
-  final int experienceYears;
-  final String clinicName;
-  final String clinicAddress;
+  final PersonalInfo personalInfo;
+  final ClinicInfo clinicInfo;
   final List<DocumentModel> documents;
 
   Application({
-    required this.fullName,
-    required this.email,
-    required this.phone,
-    required this.qualifications,
-    required this.specialization,
-    required this.experienceYears,
-    required this.clinicName,
-    required this.clinicAddress,
+    required this.personalInfo,
+    required this.clinicInfo,
     required this.documents,
   });
 
   factory Application.fromJson(Map<String, dynamic> json) {
     return Application(
-      fullName: json["fullName"],
-      email: json["email"],
-      phone: json["phone"],
-      qualifications: json["qualifications"],
-      specialization: json["specialization"],
-      experienceYears: json["experienceYears"],
-      clinicName: json["clinicName"],
-      clinicAddress: json["clinicAddress"],
-      documents: (json["documents"] as List)
+      personalInfo: PersonalInfo.fromJson(json['personalInfo']),
+      clinicInfo: ClinicInfo.fromJson(json['clinicInfo']),
+      documents: (json['documents'] as List)
           .map((d) => DocumentModel.fromJson(d))
           .toList(),
+    );
+  }
+}
+
+class PersonalInfo {
+  final String fullName;
+  final String email;
+  final String phone;
+  final String qualifications;
+  final int experienceYears;
+
+  PersonalInfo({
+    required this.fullName,
+    required this.email,
+    required this.phone,
+    required this.qualifications,
+    required this.experienceYears,
+  });
+
+  factory PersonalInfo.fromJson(Map<String, dynamic> json) {
+    return PersonalInfo(
+      fullName: json['fullName'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      qualifications: json['qualifications'] ?? '',
+      experienceYears: json['experienceYears'] ?? 0,
+    );
+  }
+}
+
+class ClinicInfo {
+  final String clinicName;
+  final String clinicAddress;
+
+  ClinicInfo({required this.clinicName, required this.clinicAddress});
+
+  factory ClinicInfo.fromJson(Map<String, dynamic> json) {
+    return ClinicInfo(
+      clinicName: json['clinicName'] ?? '',
+      clinicAddress: json['clinicAddress'] ?? '',
     );
   }
 }
@@ -160,27 +136,6 @@ class DocumentModel {
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
     return DocumentModel(name: json["name"], url: json["url"]);
   }
-}
-
-class ReviewModel {
-  final int rating;
-  final String patient;
-  final String comment;
-  final DateTime createdAt;
-
-  ReviewModel({
-    required this.rating,
-    required this.comment,
-    required this.createdAt,
-    required this.patient,
-  });
-
-  factory ReviewModel.fromJson(Map<String, dynamic> json) => ReviewModel(
-    rating: json["rating"],
-    comment: json["comment"],
-    patient: json["patient"],
-    createdAt: DateTime.parse(json["createdAt"]),
-  );
 }
 
 class DoctorStatus {

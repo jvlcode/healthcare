@@ -211,7 +211,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Specialties: ${doctor.application.specialization}",
+                "Specialties: ${doctor.application.personalInfo.qualifications}",
 
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
@@ -220,7 +220,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Experience: ${doctor.application.experienceYears}+ years",
+                "Experience: ${doctor.application.personalInfo.experienceYears}+ years",
 
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),

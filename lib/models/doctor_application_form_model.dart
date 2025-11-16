@@ -1,18 +1,35 @@
-import 'package:hive/hive.dart';
-
-part 'doctor_application_form_model.g.dart';
-
-@HiveType(typeId: 11)
-class DoctorApplicationForm extends HiveObject {
-  @HiveField(0)
+class DoctorApplicationForm {
   Map<String, dynamic>? step1PersonalInfo;
-
-  @HiveField(1)
   Map<String, dynamic>? step2ClinicInfo;
+  List<Map<String, String>>? step3Documents;
+  bool isSubmitted;
 
-  @HiveField(2)
-  List<Map<String, String>>? step3Documents; // <-- now stores objects
+  DoctorApplicationForm({
+    this.step1PersonalInfo,
+    this.step2ClinicInfo,
+    this.step3Documents,
+    this.isSubmitted = false,
+  });
 
-  @HiveField(3)
-  bool isSubmitted = false;
+  Map<String, dynamic> toJson() {
+    return {
+      'step1PersonalInfo': step1PersonalInfo,
+      'step2ClinicInfo': step2ClinicInfo,
+      'step3Documents': step3Documents,
+      'isSubmitted': isSubmitted,
+    };
+  }
+
+  factory DoctorApplicationForm.fromJson(Map<String, dynamic> json) {
+    return DoctorApplicationForm(
+      step1PersonalInfo: Map<String, dynamic>.from(
+        json['step1PersonalInfo'] ?? {},
+      ),
+      step2ClinicInfo: Map<String, dynamic>.from(json['step2ClinicInfo'] ?? {}),
+      step3Documents: (json['step3Documents'] as List?)
+          ?.map((doc) => Map<String, String>.from(doc))
+          .toList(),
+      isSubmitted: json['isSubmitted'] ?? false,
+    );
+  }
 }
