@@ -39,9 +39,7 @@ class SlotService {
   /// -------------------------------
   /// DELETE SLOT
   /// -------------------------------
-  Future<bool> deleteSlot(String slotId) async {
-    final res = await _apiClient.delete("slots/$slotId", useAuth: true);
-    print(res);
-    return res["success"] == true;
+  Future<Map<String, dynamic>> deleteSlot(String slotId) async {
+    return await _apiClient.delete("slots/$slotId", useAuth: true);
   }
 }

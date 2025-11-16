@@ -4,6 +4,14 @@ import 'api_client.dart';
 
 class AuthService {
   final ApiClient _apiClient = ApiClient();
+  // 1️⃣ The single instance stored privately
+  static final AuthService _instance = AuthService._internal();
+
+  // 2️⃣ Factory constructor returns the same instance
+  factory AuthService() => _instance;
+
+  // 3️⃣ Private named constructor prevents external instantiation
+  AuthService._internal();
 
   Future<Map<String, dynamic>> register(User user, String password) async {
     final body = user.toJson()..addAll({'password': password});

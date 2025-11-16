@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/services/slot_service.dart';
@@ -57,31 +58,60 @@ class _DoctorSlotManagementScreenState
 
     try {
       final user = await SessionManager.getCurrentUser();
-      final res = await service.getSlotList(user!.doctor!.id);
-      if (res['success'] == true) {
-        final raw = List<Map<String, dynamic>>.from(res['data']);
-        final slots = raw.map((e) => Slot.fromJson(e)).toList();
-
-        final Map<DateTime, List<Slot>> grouped = {};
-        for (final slot in slots) {
-          final date = DateTime(slot.date.year, slot.date.month, slot.date.day);
-          grouped.putIfAbsent(date, () => []).add(slot);
-        }
-
+      if (user?.doctor?.id == null) {
         setState(() {
-          slotsByDate
-            ..clear()
-            ..addAll(grouped);
+          error = "Doctor not found";
           _loading = false;
         });
-      } else {
-        throw Exception(res['message']);
+        return;
       }
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        _loading = false;
-      });
+
+      await NetworkHelper().safeCall(
+        context,
+        () => service.getSlotList(user!.doctor!.id),
+        onSuccess: (res) {
+          // Convert API data to List<Slot>
+          final raw = (res['data'] as List<dynamic>?) ?? [];
+          final slots = raw
+              .map((e) => Slot.fromJson(e as Map<String, dynamic>))
+              .toList();
+
+          // Group slots by date
+          final Map<DateTime, List<Slot>> grouped = {};
+          for (final slot in slots) {
+            final date = DateTime(
+              slot.date.year,
+              slot.date.month,
+              slot.date.day,
+            );
+            grouped.putIfAbsent(date, () => []).add(slot);
+          }
+
+          setState(() {
+            slotsByDate
+              ..clear()
+              ..addAll(grouped);
+            _loading = false;
+          });
+        },
+        onApiError: (res) {
+          final map = res as Map<String, dynamic>?; // cast safely
+          setState(() {
+            error = map != null
+                ? map['message'] as String?
+                : "Failed to load slots";
+            _loading = false;
+          });
+        },
+        onException: (e) {
+          setState(() {
+            error = e.toString();
+            _loading = false;
+          });
+        },
+      );
+    } finally {
+      if (mounted && _loading) setState(() => _loading = false);
     }
   }
 
@@ -130,45 +160,71 @@ class _DoctorSlotManagementScreenState
     final newEnd = format24(end);
     final formattedDate = DateFormat('yyyy-MM-dd').format(date);
 
-    try {
-      final res = await service.createSlot(
+    // Use NetworkHelper for API call
+    await NetworkHelper().safeCall(
+      context,
+      () => service.createSlot(
         date: formattedDate,
         startTime: newStart,
         endTime: newEnd,
-      );
+      ),
+      onSuccess: (res) {
+        // Get slot ID safely
+        final data = res['data'] as Map<String, dynamic>?;
+        final slotId = data?['_id'] ?? data?['id'];
 
-      final slotId = res['data']['_id'] ?? res['data']['id'];
+        if (slotId == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Failed to get slot ID")),
+            );
+          }
+          return;
+        }
 
-      if (slotId == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Failed to get slot ID")));
-        return;
-      }
+        final slot = Slot(
+          id: slotId,
+          startTime: newStart,
+          endTime: newEnd,
+          startTimeLabel: start.format(context),
+          endTimeLabel: end.format(context),
+          dateLabel: DateFormat('d MMM yyyy').format(date),
+          date: date,
+          available: true,
+        );
 
-      final slot = Slot(
-        id: slotId,
-        startTime: newStart,
-        endTime: newEnd,
-        startTimeLabel: start.format(context),
-        endTimeLabel: end.format(context),
-        dateLabel: DateFormat('d MMM yyyy').format(date),
-        date: date,
-        available: true,
-      );
+        setState(() {
+          slotsByDate.putIfAbsent(date, () => []).add(slot);
+        });
 
-      setState(() {
-        slotsByDate.putIfAbsent(date, () => []).add(slot);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Slot created successfully")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
-    }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Slot created successfully")),
+          );
+        }
+      },
+      onApiError: (res) {
+        final map = res as Map<String, dynamic>?;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                map != null
+                    ? map['message'] ?? "Failed to create slot"
+                    : "Failed to create slot",
+              ),
+            ),
+          );
+        }
+      },
+      onException: (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        }
+      },
+    );
   }
 
   void _editSlot(DateTime date, int index) async {
@@ -193,18 +249,19 @@ class _DoctorSlotManagementScreenState
     }
 
     String format24(TimeOfDay t) =>
-        '${t.hour}:${t.minute.toString().padLeft(2, "0")}';
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, "0")}';
     String format12(TimeOfDay t) => t.format(context);
 
-    try {
-      final response = await service.updateSlot(
+    await NetworkHelper().safeCall(
+      context,
+      () => service.updateSlot(
         slotId: slot.id,
         date: DateFormat('yyyy-MM-dd').format(date),
         startTime: format24(start),
         endTime: format24(end),
-      );
-
-      if (response['success'] == true) {
+      ),
+      onSuccess: (_) {
+        // Update the slot locally
         setState(() {
           slotsByDate[date]![index] = slot.copyWith(
             startTime: format24(start),
@@ -214,15 +271,34 @@ class _DoctorSlotManagementScreenState
           );
         });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Slot updated")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
-    }
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Slot updated")));
+        }
+      },
+      onApiError: (res) {
+        final map = res as Map<String, dynamic>?;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                map != null
+                    ? map['message'] as String? ?? "Failed to update slot"
+                    : "Failed to update slot",
+              ),
+            ),
+          );
+        }
+      },
+      onException: (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        }
+      },
+    );
   }
 
   void _deleteSlot(DateTime date, int index) async {
@@ -235,24 +311,47 @@ class _DoctorSlotManagementScreenState
       return;
     }
 
-    try {
-      final response = await service.deleteSlot(slot.id);
+    await NetworkHelper().safeCall<Map<String, dynamic>>(
+      context,
+      () => service.deleteSlot(slot.id),
+      onSuccess: (res) {
+        if (res['success'] == true) {
+          // Remove the slot locally
+          setState(() {
+            slotsByDate[date]!.removeAt(index);
+            if (slotsByDate[date]!.isEmpty) slotsByDate.remove(date);
+          });
 
-      if (response == true) {
-        setState(() {
-          slotsByDate[date]!.removeAt(index);
-          if (slotsByDate[date]!.isEmpty) slotsByDate.remove(date);
-        });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Slot deleted")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
-    }
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("Slot deleted")));
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Failed to delete slot")),
+            );
+          }
+        }
+      },
+      onApiError: (res) {
+        // Since deleteSlot returns bool, you can just show a generic message
+        if (mounted) {
+          print(res);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Failed to delete slot")),
+          );
+        }
+      },
+      onException: (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        }
+      },
+    );
   }
 
   int _compareTimes(TimeOfDay a, TimeOfDay b) {

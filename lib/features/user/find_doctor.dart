@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
@@ -45,24 +46,36 @@ class _FindDoctorState extends State<FindDoctor> {
     });
 
     try {
-      final response = await _doctorService.getDoctorList();
-      if (response['success'] == true && response['data'] is List) {
-        final rawList = response['data'] as List;
-        setState(() {
+      await NetworkHelper().safeCall(
+        context,
+        () => _doctorService.getDoctorList(),
+        onSuccess: (res) {
+          // Ensure res['data'] is a List
+          final rawList = (res['data'] as List<dynamic>?) ?? [];
           doctors = rawList.map((d) => Doctor.fromJson(d)).toList();
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = response['message'] ?? "Failed to load doctors";
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+
+          setState(() {
+            _loading = false;
+          });
+        },
+        onApiError: (res) {
+          final map = res as Map<String, dynamic>?; // cast safely
+          setState(() {
+            _error = map != null
+                ? map['message'] as String?
+                : "Failed to load doctors";
+            _loading = false;
+          });
+        },
+        onException: (e) {
+          setState(() {
+            _error = e.toString();
+            _loading = false;
+          });
+        },
+      );
+    } finally {
+      if (mounted && _loading) setState(() => _loading = false);
     }
   }
 

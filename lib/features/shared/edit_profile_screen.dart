@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
@@ -35,7 +36,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> loadUserData() async {
     final user = await SessionManager.getCurrentUser();
-    print("EDIT $user");
+
     if (user != null && mounted) {
       setState(() {
         _nameController.text = user.name ?? '';
@@ -60,43 +61,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Check server before attempting update
     setState(() => _isSaving = true);
+
     try {
-      final reachable = await _authService.isServerReachable();
-      if (!reachable) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Server Unreachable")));
-        return; // Do not continue saving
-      }
+      await NetworkHelper().safeCall(
+        context,
+        () => _userService.updateProfile(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          bio: _bioController.text.trim(),
+          profileImage: _profileImage,
+        ),
+        onSuccess: (res) async {
+          // Update user in session
+          final updatedUser = User.fromJson(res['data']);
+          await SessionManager.updateUser(updatedUser);
 
-      final res = await _userService.updateProfile(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
-        bio: _bioController.text.trim(),
-        profileImage: _profileImage,
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Profile updated successfully!")),
+            );
+            Navigator.pop(context);
+          }
+        },
+        onApiError: (res) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(res['message'] ?? "Profile update failed"),
+              ),
+            );
+          }
+        },
+        onException: (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+          }
+        },
       );
-
-      if (res != null && res['success'] == true) {
-        final updatedUser = User.fromJson(res['data']);
-        await SessionManager.updateUser(updatedUser);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Profile updated successfully!")),
-          );
-          Navigator.pop(context);
-        }
-      } else {
-        throw Exception(res != null ? res['message'] : "Unknown error");
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

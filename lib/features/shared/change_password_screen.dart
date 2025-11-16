@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/services/auth_service.dart';
 import 'package:healthcare/services/user_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -23,27 +25,26 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _userService = UserService();
 
   void _savePassword() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final res = await _userService.changePassword(
-          oldPassword: _oldPasswordController.text.trim(),
-          newPassword: _newPasswordController.text.trim(),
-        );
+    if (!_formKey.currentState!.validate()) return;
 
-        if (res['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Password changed successfully!")),
-          );
-          Navigator.pop(context);
-        } else {
-          throw Exception(res['message']);
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-      }
-    }
+    await NetworkHelper().safeCall(
+      context,
+      () => _userService.changePassword(
+        oldPassword: _oldPasswordController.text.trim(),
+        newPassword: _newPasswordController.text.trim(),
+      ),
+      onSuccess: (res) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Password changed successfully!")),
+        );
+        Navigator.pop(context);
+      },
+      onApiError: (res) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? "Password change failed")),
+        );
+      },
+    );
   }
 
   @override

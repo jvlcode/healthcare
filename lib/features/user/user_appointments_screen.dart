@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
@@ -44,17 +45,36 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     });
 
     try {
-      final service = AppointmentService();
-      final data = await service.getUserAppointments();
-      setState(() {
-        bookings = data;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      await NetworkHelper().safeCall(
+        context,
+        () => AppointmentService().getUserAppointments(),
+        onSuccess: (res) {
+          // Assuming res['data'] contains a List of appointment maps
+          final data = res as List<dynamic>; // cast to List<dynamic> first
+          bookings = data.map((e) => Appointment.fromJson(e)).toList();
+
+          setState(() {
+            _loading = false;
+          });
+        },
+        onApiError: (res) {
+          setState(() {
+            final map = res as Map<String, dynamic>?; // cast to Map
+            _error = map != null
+                ? map['message'] as String?
+                : "Failed to load appointments";
+            _loading = false;
+          });
+        },
+        onException: (e) {
+          setState(() {
+            _error = e.toString();
+            _loading = false;
+          });
+        },
+      );
+    } finally {
+      if (mounted && _loading) setState(() => _loading = false);
     }
   }
 
