@@ -4,14 +4,14 @@ import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
 import 'package:healthcare/core/widgets/offline_banner.dart';
-import 'package:healthcare/features/doctor/appointments_screen.dart';
+import 'package:healthcare/features/doctor/doctor_appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'package:healthcare/features/user/faq_screen.dart'; // If doctor also needs FAQ
 
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
-import 'package:healthcare/features/doctor/appointments_screen.dart';
+import 'package:healthcare/features/doctor/doctor_appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
 import 'package:healthcare/features/user/faq_screen.dart';
 import 'package:healthcare/features/doctor/application/application_status_screen.dart';

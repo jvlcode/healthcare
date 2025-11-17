@@ -9,8 +9,8 @@ import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
-import 'package:healthcare/features/user/doctors/videocall_screen.dart';
 import 'package:healthcare/features/user/videocall_history_screen.dart';
+import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
 import 'package:provider/provider.dart';
@@ -50,19 +50,18 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
         () => AppointmentService().getUserAppointments(),
         onSuccess: (res) {
           // Assuming res['data'] contains a List of appointment maps
-          final data = res as List<dynamic>; // cast to List<dynamic> first
+          // cast to List<dynamic> first
+          final data = res['data'] as List;
           bookings = data.map((e) => Appointment.fromJson(e)).toList();
-
+          // bookings = res;
           setState(() {
             _loading = false;
           });
         },
         onApiError: (res) {
           setState(() {
-            final map = res as Map<String, dynamic>?; // cast to Map
-            _error = map != null
-                ? map['message'] as String?
-                : "Failed to load appointments";
+            // final map = res as Map<String, dynamic>?; // cast to Map
+            _error = "Failed to load appointments";
             _loading = false;
           });
         },
@@ -162,7 +161,11 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
                           : () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => VideoCallScreen(),
+                                builder: (_) => VideoCallScreen(
+                                  appointmentId: booking.id,
+                                  doctorId: booking.doctor.id,
+                                  patientId: booking.patient.id,
+                                ),
                               ),
                             ),
                       text: "Video Call",

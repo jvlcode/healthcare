@@ -6,7 +6,7 @@ import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/retry_loader.dart';
 import 'package:healthcare/core/widgets/server_gaurd.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
-import 'package:healthcare/features/user/doctors/videocall_screen.dart';
+import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
 import 'package:provider/provider.dart';
@@ -67,9 +67,12 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     });
 
     try {
-      final data = await service.getUserAppointments();
+      final res = await service.getUserAppointments();
       setState(() {
-        bookings = data;
+        final data =
+            res['data'] as List<dynamic>; // cast to List<dynamic> first
+        bookings = data.map((e) => Appointment.fromJson(e)).toList();
+        // bookings = data;
         _loading = false;
       });
     } catch (e) {
@@ -234,7 +237,13 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             child: GFButton(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => VideoCallScreen()),
+                MaterialPageRoute(
+                  builder: (_) => VideoCallScreen(
+                    appointmentId: booking.id,
+                    doctorId: booking.doctor.id,
+                    patientId: booking.patient.id,
+                  ),
+                ),
               ),
               text: "Start Call",
               color: Colors.blue,

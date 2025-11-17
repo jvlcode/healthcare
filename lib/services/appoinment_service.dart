@@ -23,13 +23,11 @@ class AppointmentService {
     return await _apiClient.post("appointments", body, useAuth: true);
   }
 
-  Future<List<Appointment>> getUserAppointments() async {
+  Future<Map<String, dynamic>> getUserAppointments() async {
     final res = await _apiClient.get("appointments", useAuth: true);
     // print("[Appointment Service] $res");
     if (res['success'] == true && res['data'] is List) {
-      return (res['data'] as List)
-          .map((json) => Appointment.fromJson(json))
-          .toList();
+      return res;
     } else {
       throw Exception(res['message'] ?? 'Failed to fetch appointments');
     }

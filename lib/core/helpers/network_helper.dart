@@ -59,7 +59,10 @@ class NetworkHelper {
       }
 
       return result;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Exception: $e');
+      print('Stack trace: $stackTrace');
+
       // 4️⃣ Handle exceptions
       if (onException != null) {
         onException(e);
