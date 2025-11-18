@@ -2,104 +2,140 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/features/videocall/agora_service.dart';
 import 'package:healthcare/services/videocall_service.dart';
 
+typedef RemoteJoinedCallback = void Function(int uid);
+
 class VideoCallController extends ChangeNotifier {
+  final String appointmentId;
+  final String doctorId;
+  final String patientId;
+  final String channelName;
+  final bool isDoctor;
+
+  VideoCallController({
+    required this.appointmentId,
+    required this.doctorId,
+    required this.patientId,
+    required this.channelName,
+    required this.isDoctor,
+  });
+
   final AgoraService agora = AgoraService();
-  final VideoCallService _videoCallService = VideoCallService();
+  final VideoCallService service = VideoCallService();
+
+  bool _disposed = false;
+  bool _initialized = false;
 
   int? remoteUid;
+  bool isReady = false;
   bool isMuted = false;
   bool isCameraOff = false;
 
-  // Call tracking
-  String? _callId;
-  bool isBackingUp = false;
-  bool isBackedUp = false;
-  bool isReady = false; // engine initialized
+  String? _currentChannel;
+  int? _currentUid;
 
-  /// Initialize engine, fetch token, create backend call, join channel
-  Future<void> startCall({
-    required String appointmentId,
-    required String doctorId,
-    required String patientId,
-    required String channelName,
-    String uid = "0",
-  }) async {
+  // Safe notifier
+  void _safeUpdate(VoidCallback fn) {
+    if (_disposed) return;
+    fn();
+    if (!_disposed) notifyListeners();
+  }
+
+  // ------------------------------
+  // Start Call
+  // ------------------------------
+  Future<void> startCall({RemoteJoinedCallback? onRemoteJoined}) async {
+    if (_disposed) return;
+
     try {
-      // 1️⃣ Fetch token
-      final res = await _videoCallService.fetchAgoraToken(
-        channel: channelName,
-        uid: uid,
-      );
-      final data = res['data'];
-      final token = data["token"];
+      final uid = isDoctor ? 1001 : 2001;
+      _currentUid = uid;
+      _currentChannel = channelName;
 
-      // 2️⃣ Create backend call record
-      final callData = await _videoCallService.startCall(
-        appointmentId: appointmentId,
-        doctorId: doctorId,
-        patientId: patientId,
-        channelName: channelName,
-      );
-      _callId = callData["data"]["_id"];
+      _safeUpdate(() {
+        remoteUid = null;
+        isReady = false;
+      });
 
-      // 3️⃣ Initialize Agora engine
-      await agora.initialize(
-        onUserJoined: (uid) {
-          remoteUid = uid;
-          notifyListeners();
-        },
-        onUserLeft: (uid) {
-          remoteUid = null;
-          notifyListeners();
-        },
-      );
+      final res = await service.fetchAgoraToken(channel: channelName, uid: uid);
+      final token = res['data']['token'];
 
-      // 4️⃣ Join channel
-      await agora.joinChannel(token: token, channel: channelName);
-
-      isReady = true;
-      notifyListeners();
-    } catch (e, stack) {
-      debugPrint("Error starting call: $e");
-      debugPrint("Error stack: $stack");
-    }
-  }
-
-  /// Toggle microphone
-  void toggleMute() {
-    isMuted = !isMuted;
-    agora.muteMic(isMuted);
-    notifyListeners();
-  }
-
-  /// Toggle camera
-  void toggleCamera() {
-    isCameraOff = !isCameraOff;
-    agora.muteCamera(isCameraOff);
-    notifyListeners();
-  }
-
-  /// End call and update backend
-  Future<void> endCall({String? videoUrl}) async {
-    if (_callId != null) {
-      isBackingUp = true;
-      notifyListeners();
-
-      try {
-        await _videoCallService.endCall(
-          callId: _callId!,
-          isBackupAvailable: videoUrl != null,
-          videoUrl: videoUrl,
+      if (!_initialized) {
+        await agora.initialize(
+          onUserJoined: (remote) {
+            if (_disposed) return;
+            _safeUpdate(() => remoteUid = remote);
+            onRemoteJoined?.call(remote);
+          },
+          onUserLeft: (remote) {
+            if (_disposed) return;
+            _safeUpdate(() => remoteUid = null);
+          },
         );
-        isBackedUp = videoUrl != null;
-      } catch (e) {
-        debugPrint("Error ending call: $e");
-      } finally {
-        isBackingUp = false;
-        notifyListeners();
+        _initialized = true;
       }
+
+      await agora.joinChannel(token: token, channel: channelName, uid: uid);
+
+      _safeUpdate(() => isReady = true);
+    } catch (e, st) {
+      debugPrint("Error starting call: $e");
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  // ------------------------------
+  // Mute / Camera
+  // ------------------------------
+  void toggleMute() {
+    _safeUpdate(() {
+      isMuted = !isMuted;
+      agora.muteMic(isMuted);
+    });
+  }
+
+  void toggleCamera() {
+    _safeUpdate(() {
+      isCameraOff = !isCameraOff;
+      agora.muteCamera(isCameraOff);
+    });
+  }
+
+  // ------------------------------
+  // End Call
+  // ------------------------------
+  Future<void> endCall() async {
+    if (_disposed) return;
+
+    try {
+      if (_initialized) {
+        await agora.engine.leaveChannel();
+        await agora.engine.stopPreview();
+        await agora.engine.muteLocalAudioStream(true);
+        await agora.engine.muteLocalVideoStream(true);
+      }
+
+      _safeUpdate(() {
+        remoteUid = null;
+        isReady = false;
+        _currentChannel = null;
+        _currentUid = null;
+      });
+    } catch (e) {
+      debugPrint("Error ending call: $e");
+    }
+  }
+
+  // ------------------------------
+  // Dispose
+  // ------------------------------
+  @override
+  void dispose() {
+    _disposed = true;
+
+    if (_initialized) {
+      agora.engine.release(); // Must destroy engine!
     }
 
-    await agora.dispose();
+    super.dispose();
   }
 }

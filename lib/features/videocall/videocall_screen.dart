@@ -1,52 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:healthcare/features/videocall/videocall_controller.dart';
-import 'package:healthcare/features/videocall/config.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
-class VideoCallScreen extends StatelessWidget {
+class VideoCallScreen extends StatefulWidget {
   final String doctorId;
   final String patientId;
   final String appointmentId;
+  final bool isDoctor;
 
   const VideoCallScreen({
     super.key,
     required this.doctorId,
     required this.patientId,
     required this.appointmentId,
+    required this.isDoctor,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) {
-        final controller = VideoCallController();
-        controller.startCall(
-          appointmentId: appointmentId,
-          doctorId: doctorId,
-          patientId: patientId,
-          channelName: AgoraConfig.channel,
-        );
-        return controller;
+  State<VideoCallScreen> createState() => _VideoCallScreenState();
+}
+
+class _VideoCallScreenState extends State<VideoCallScreen> {
+  late final VideoCallController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoCallController(
+      appointmentId: widget.appointmentId,
+      doctorId: widget.doctorId,
+      patientId: widget.patientId,
+      channelName: "appointment_${widget.appointmentId}",
+      isDoctor: widget.isDoctor,
+    );
+    _controller.startCall(
+      onRemoteJoined: (uid) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.isDoctor ? "Patient joined!" : "Doctor joined!",
+              ),
+            ),
+          );
+        }
       },
-      child: _VideoCallView(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<bool> _onWillPop() async {
+    await _controller.endCall();
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: _controller,
+      child: WillPopScope(onWillPop: _onWillPop, child: _VideoCallView()),
     );
   }
 }
 
-class _VideoCallView extends StatelessWidget {
+class _VideoCallView extends StatefulWidget {
   const _VideoCallView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.watch<VideoCallController>();
+  State<_VideoCallView> createState() => _VideoCallViewState();
+}
 
-    if (!c.isReady) {
+class _VideoCallViewState extends State<_VideoCallView> {
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<VideoCallController>();
+
+    if (!controller.isReady) {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final waitingMessage = controller.isDoctor
+        ? "Waiting for the patient to join..."
+        : "Waiting for the doctor to join...";
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -54,25 +98,34 @@ class _VideoCallView extends StatelessWidget {
         children: [
           // Remote video
           Positioned.fill(
-            child: c.remoteUid != null
+            child: controller.remoteUid != null
                 ? AgoraVideoView(
                     controller: VideoViewController.remote(
-                      rtcEngine: c.agora.engine,
-                      canvas: VideoCanvas(uid: c.remoteUid),
-                      connection: const RtcConnection(
-                        channelId: AgoraConfig.channel,
+                      rtcEngine: controller.agora.engine,
+                      canvas: VideoCanvas(uid: controller.remoteUid!),
+                      connection: RtcConnection(
+                        channelId: controller.channelName,
                       ),
                     ),
                   )
-                : const Center(
-                    child: Text(
-                      "Waiting for other user...",
-                      style: TextStyle(color: Colors.white),
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          waitingMessage,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
           ),
-
-          // Local video preview
+          // Local preview
           Positioned(
             right: 20,
             top: 60,
@@ -83,34 +136,13 @@ class _VideoCallView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: AgoraVideoView(
                   controller: VideoViewController(
-                    rtcEngine: c.agora.engine,
+                    rtcEngine: controller.agora.engine,
                     canvas: const VideoCanvas(uid: 0),
                   ),
                 ),
               ),
             ),
           ),
-
-          // Backup indicator
-          if (c.isBackingUp || c.isBackedUp)
-            Positioned(
-              top: 30,
-              left: 20,
-              child: Row(
-                children: [
-                  Icon(
-                    c.isBackingUp ? Icons.cloud_upload : Icons.cloud_done,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    c.isBackingUp ? "Backing up..." : "Backup completed",
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-
           // Controls
           Positioned(
             bottom: 30,
@@ -120,22 +152,25 @@ class _VideoCallView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _bottomButton(
-                  icon: c.isMuted ? Icons.mic_off : Icons.mic,
-                  onTap: c.toggleMute,
+                  icon: controller.isMuted ? Icons.mic_off : Icons.mic,
+                  onTap: controller.toggleMute,
                 ),
                 const SizedBox(width: 22),
                 _bottomButton(
                   icon: Icons.call_end,
                   color: Colors.red,
                   onTap: () async {
-                    await c.endCall();
-                    Navigator.pop(context);
+                    Navigator.maybePop(
+                      context,
+                    ); // This will trigger willPop internally
                   },
                 ),
                 const SizedBox(width: 22),
                 _bottomButton(
-                  icon: c.isCameraOff ? Icons.videocam_off : Icons.videocam,
-                  onTap: c.toggleCamera,
+                  icon: controller.isCameraOff
+                      ? Icons.videocam_off
+                      : Icons.videocam,
+                  onTap: controller.toggleCamera,
                 ),
               ],
             ),
