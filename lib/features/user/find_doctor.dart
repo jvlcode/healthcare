@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
-import 'package:healthcare/core/widgets/server_gaurd.dart';
+import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
-import 'package:provider/provider.dart';
 import '../../../core/widgets/doctor_card.dart';
 import '../../../core/widgets/time_box.dart';
 
@@ -20,23 +19,17 @@ class FindDoctor extends StatefulWidget {
 }
 
 class _FindDoctorState extends State<FindDoctor> {
-  int selectedDoctorIndex = 0;
   final DoctorService _doctorService = DoctorService();
+
+  int selectedDoctorIndex = 0;
   List<Doctor> doctors = [];
   bool _loading = true;
   String? _error;
-  late StreamSubscription<bool> _sub;
 
   @override
   void initState() {
     super.initState();
-    _fetchDoctors(); // fetch doctors on screen load
-    final reach = context.read<ReachabilityController>();
-    _sub = reach.reachabilityStream.listen((isReachable) {
-      if (isReachable) {
-        _fetchDoctors(); // 🔥 auto fetch when server comes back
-      }
-    });
+    _fetchDoctors();
   }
 
   Future<void> _fetchDoctors() async {
@@ -50,48 +43,60 @@ class _FindDoctorState extends State<FindDoctor> {
         context,
         () => _doctorService.getDoctorList(),
         onSuccess: (res) {
-          // Ensure res['data'] is a List
-          final rawList = (res['data'] as List<dynamic>?) ?? [];
-          doctors = rawList.map((d) => Doctor.fromJson(d)).toList();
-
-          setState(() {
-            _loading = false;
-          });
+          final raw = (res['data'] as List<dynamic>? ?? []);
+          doctors = raw.map((d) => Doctor.fromJson(d)).toList();
         },
         onApiError: (res) {
-          final map = res as Map<String, dynamic>?; // cast safely
-          setState(() {
-            _error = map != null
-                ? map['message'] as String?
-                : "Failed to load doctors";
-            _loading = false;
-          });
+          final map = res as Map<String, dynamic>?;
+          _error = map?['message'] ?? "Failed to load doctors";
         },
-        onException: (e) {
-          setState(() {
-            _error = e.toString();
-            _loading = false;
-          });
-        },
+        onException: (e) => _error = e.toString(),
       );
     } finally {
-      if (mounted && _loading) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
+  }
+
+  Future<void> _refreshDoctors() async {
+    await _fetchDoctors();
+    Fluttertoast.showToast(
+      msg: "Information updated!",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.TOP,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ServerGuard(onRetry: _fetchDoctors, child: _buildMainUI());
+    return NetworkAwareScaffold(
+      loading: _loading,
+      error: _error,
+      onRetry: _refreshDoctors,
+      child: _buildUI(),
+    );
   }
 
-  Widget _buildMainUI() {
+  Widget _buildUI() {
     if (_error != null || doctors.isEmpty) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            "No doctors available",
-            style: const TextStyle(fontSize: 16, color: Colors.black54),
-          ),
+      return RefreshIndicator(
+        onRefresh: _refreshDoctors,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: const Center(
+                child: Text(
+                  "No doctors available",
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -110,7 +115,6 @@ class _FindDoctorState extends State<FindDoctor> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F2),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -127,17 +131,14 @@ class _FindDoctorState extends State<FindDoctor> {
               },
             ),
             const SizedBox(height: 20),
-            // Doctor Cards Carousel
+
+            /// Doctors carousel
             SizedBox(
               height: 180,
               child: PageView.builder(
                 controller: PageController(viewportFraction: 0.55),
                 itemCount: doctors.length,
-                onPageChanged: (i) {
-                  setState(() {
-                    selectedDoctorIndex = i;
-                  });
-                },
+                onPageChanged: (i) => setState(() => selectedDoctorIndex = i),
                 itemBuilder: (context, index) => DoctorCard(
                   doctor: doctors[index],
                   isSelected: index == selectedDoctorIndex,
@@ -161,7 +162,7 @@ class _FindDoctorState extends State<FindDoctor> {
             ),
             const SizedBox(height: 10),
 
-            // Slot list similar to DoctorSlotManagementScreen
+            /// Slots
             Expanded(
               child: ListView.builder(
                 itemCount: sortedDates.length,
@@ -192,15 +193,13 @@ class _FindDoctorState extends State<FindDoctor> {
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
-                            children: times
-                                .map(
-                                  (t) => TimeBox(
-                                    time: t,
-                                    isSelected: false,
-                                    onTap: null,
-                                  ),
-                                )
-                                .toList(),
+                            children: times.map((t) {
+                              return TimeBox(
+                                time: t,
+                                isSelected: false,
+                                onTap: null,
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),

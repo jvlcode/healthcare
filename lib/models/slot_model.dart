@@ -19,6 +19,29 @@ class Slot {
     required this.available,
   });
 
+  DateTime get startDateTime {
+    // assuming slot.date is in "YYYY-MM-DD"
+
+    // startTime is like "13:00"
+    final parts = startTime.split(":");
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  DateTime get endDateTime {
+    // assuming slot.date is in "YYYY-MM-DD"
+    final date = DateTime.parse(endTime);
+
+    // startTime is like "13:00"
+    final parts = endTime.split(":");
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
   factory Slot.fromJson(Map<String, dynamic> json) {
     return Slot(
       id: json["_id"] ?? json["id"], // support both _id and id

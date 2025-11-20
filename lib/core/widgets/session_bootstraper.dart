@@ -40,11 +40,16 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
     print("🟢 Hive Boxes Opened");
 
     // ✅ Check server first
-    final reachable = await AuthService().isServerReachable();
-    Provider.of<ReachabilityController>(
+    final reachability = Provider.of<ReachabilityController>(
       context,
       listen: false,
-    ).updateReachability(reachable);
+    );
+
+    // // ✅ Start periodic monitoring
+    // reachability.startMonitoring(); // 🔥 Add this line
+
+    final reachable = await AuthService().isServerReachable();
+    reachability.updateReachability(reachable);
 
     if (!reachable) {
       validateInBackground = false;

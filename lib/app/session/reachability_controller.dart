@@ -35,4 +35,10 @@ class ReachabilityController extends ChangeNotifier {
     _reachabilityStream.close();
     super.dispose();
   }
+
+  void startMonitoring({Duration interval = const Duration(seconds: 10)}) {
+    Timer.periodic(interval, (timer) async {
+      await checkServer();
+    });
+  }
 }

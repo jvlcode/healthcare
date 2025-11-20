@@ -49,6 +49,8 @@ dependencies:
   provider: ^6.1.5+1
   agora_rtc_engine: ^6.5.3
   permission_handler: ^12.0.1
+  fluttertoast: ^9.0.0
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +68,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/images/user_avatar.png
+
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -102,3 +107,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+ 

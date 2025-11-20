@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/models/user_model.dart';
-import 'package:healthcare/services/auth_service.dart';
 import 'package:healthcare/services/user_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  final User? prefilledUser;
+
+  const EditProfileScreen({super.key, this.prefilledUser});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -26,7 +29,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String _profileImageUrl = '';
   bool _isSaving = false;
   final _userService = UserService();
-  final _authService = AuthService();
 
   @override
   void initState() {
@@ -35,7 +37,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> loadUserData() async {
-    final user = await SessionManager.getCurrentUser();
+    final user = widget.prefilledUser;
 
     if (user != null && mounted) {
       setState(() {
@@ -43,7 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _emailController.text = user.email ?? '';
         _phoneController.text = user.phone ?? '';
         _bioController.text = user.bio ?? '';
-        _profileImageUrl = ImageUtils.resolve(user.profileImage) ?? '';
+        _profileImageUrl = user.profileImage ?? '';
       });
     }
   }
@@ -79,8 +81,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           await SessionManager.updateUser(updatedUser);
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Profile updated successfully!")),
+            Fluttertoast.showToast(
+              msg: "Profile updated!",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.TOP,
+              backgroundColor: Colors.black,
+              textColor: Colors.white,
+              fontSize: 16.0,
             );
             Navigator.pop(context);
           }
@@ -138,15 +145,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.grey[300],
-                      backgroundImage: _profileImage != null
-                          ? FileImage(_profileImage!) // user picked image
-                          : (_profileImageUrl.isNotEmpty
-                                ? NetworkImage(
-                                    _profileImageUrl,
-                                  ) // existing profile URL
-                                : NetworkImage(
-                                    ImageUtils.fallbackUrl,
-                                  )), // fallback URL
+                      child: SafeAvatar(
+                        imageUrl: ImageUtils.resolve(_profileImageUrl),
+                        localFile: _profileImage,
+                        size: 120,
+                      ),
                     ),
                     Positioned(
                       bottom: 0,

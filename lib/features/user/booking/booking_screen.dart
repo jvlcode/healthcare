@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
@@ -148,6 +149,40 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  Future<void> _handleBooking(BuildContext context) async {
+    final bool? canProceed = await _showExtraInfoForm();
+    if (canProceed != true) return;
+
+    final appointmentService = AppointmentService();
+
+    await NetworkHelper().safeCall(
+      context,
+      () => appointmentService.createAppointment(
+        doctorId: doctor.id,
+        slotId: selectedSlot!['id'],
+        age: ageController.text,
+        reason: reasonController.text,
+      ),
+      onSuccess: (res) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const BookingSuccessScreen()),
+        );
+      },
+      onApiError: (res) {
+        final msg = res['message'] ?? 'Booking failed';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $msg")));
+      },
+      onException: (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Exception: ${e.toString()}")));
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> groupedSlots = [];
@@ -252,34 +287,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ElevatedButton(
               onPressed: selectedSlot == null
                   ? null
-                  : () async {
-                      final bool? canProceed = await _showExtraInfoForm();
-
-                      if (canProceed != true) return;
-
-                      final appointmentService = AppointmentService();
-                      final res = await appointmentService.createAppointment(
-                        doctorId: doctor.id,
-                        slotId: selectedSlot!['id'],
-                        age: ageController.text,
-                        reason: reasonController.text,
-                      );
-
-                      if (res['success'] == true) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BookingSuccessScreen(),
-                          ),
-                        );
-                      } else {
-                        final msg = res['message'] ?? 'Booking failed';
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text("Error: $msg")));
-                      }
-                    },
-
+                  : () => _handleBooking(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
                 padding: const EdgeInsets.symmetric(vertical: 14),

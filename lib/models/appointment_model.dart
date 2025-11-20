@@ -1,15 +1,15 @@
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/slot_model.dart';
-import 'package:healthcare/services/patient_model.dart';
+import 'package:healthcare/models/user_model.dart';
 
 class Appointment {
   final String id;
-  final String status;
+  String status;
   final int amount;
   final DateTime createdAt;
   final Doctor doctor;
   final Slot slot;
-  final Patient patient;
+  final User patient;
   final String age;
   final String reason;
 
@@ -36,7 +36,7 @@ class Appointment {
         createdAt: DateTime.parse(json['createdAt']),
         doctor: Doctor.fromAppointmentJson(json),
         slot: Slot.fromJson(json['slot']),
-        patient: Patient.fromJson(json['user']),
+        patient: User.fromJson(json['user']),
       );
     } catch (e, stack) {
       print('❌ Failed to parse Appointment: $e');

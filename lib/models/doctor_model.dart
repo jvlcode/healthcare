@@ -56,13 +56,12 @@ class Doctor {
   // For mapping doctor inside an appointment response
   factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
     final doctorJson = json['doctor'] ?? {};
-    final userJson = json['user'] ?? {};
 
     return Doctor(
       id: doctorJson["_id"] ?? "",
       name: doctorJson["application"]?["personalInfo"]?["fullName"] ?? "",
       specialization: doctorJson["specialization"] ?? "",
-      profileImage: userJson["profileImage"] ?? "",
+      profileImage: doctorJson["user"]["profileImage"] ?? "",
       averageRating: (doctorJson["averageRating"] ?? 0).toDouble(),
       application: Application.fromJson(doctorJson["application"] ?? {}),
       slots: [],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/widgets/safe_avatar.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -26,9 +27,8 @@ class _AppDrawerState extends State<AppDrawer> {
       setState(() {
         name = user.name;
         email = user.email;
-        profileImage = ImageUtils.resolve(user.profileImage);
+        profileImage = user.profileImage;
       });
-      print(profileImage);
     }
   }
 
@@ -47,8 +47,9 @@ class _AppDrawerState extends State<AppDrawer> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  backgroundImage: NetworkImage(
-                    profileImage ?? ImageUtils.fallbackUrl,
+                  child: SafeAvatar(
+                    imageUrl: ImageUtils.resolve(profileImage),
+                    size: 120,
                   ),
                 ),
                 const SizedBox(width: 16),

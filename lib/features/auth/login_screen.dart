@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
-import 'package:hive/hive.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,21 +43,30 @@ class _LoginScreenState extends State<LoginScreen> {
   void _loginUser() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-      final res = await _authService.login(email, password);
+    // Capture Navigator safely
+    final navigator = Navigator.of(context);
 
-      if (res['success'] == true) {
+    await NetworkHelper().safeCall(
+      context,
+      () => _authService.login(email, password),
+      onSuccess: (res) async {
+        if (!mounted) return;
+
         final data = res['data'] as Map<String, dynamic>?;
 
-        if (data == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid login response")),
-          );
+        if (res['success'] != true || data == null) {
+          final msg = res['message'] ?? 'Login failed';
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(msg)));
+          }
           return;
         }
 
@@ -66,55 +74,58 @@ class _LoginScreenState extends State<LoginScreen> {
         final accessToken = data['accessToken']?.toString();
         final refreshToken = data['refreshToken']?.toString() ?? '';
 
-        if (userJson != null && accessToken != null) {
-          User? user;
-
-          try {
-            user = User.fromJson(userJson);
-          } catch (e, stack) {
-            print("❌ User parsing failed: $e");
-            print(stack);
+        if (userJson == null || accessToken == null) {
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Login failed: Invalid user data")),
+              const SnackBar(content: Text("Invalid login credentials")),
             );
-            return;
           }
+          return;
+        }
 
-          final secureStorage = FlutterSecureStorage();
-          await secureStorage.write(key: 'access_token', value: accessToken);
-          await secureStorage.write(key: 'refresh_token', value: refreshToken);
+        try {
+          final user = User.fromJson(userJson);
+          await SessionManager.saveSession(userJson, accessToken, refreshToken);
 
-          final userBox = await Hive.openBox('userBox');
-          await userBox.put('user', data['user']);
+          if (!mounted) return;
 
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text("Login successful")));
 
-          if (user.role.toUpperCase() == 'DOCTOR') {
-            Navigator.pushReplacementNamed(context, AppRoutes.doctorHome);
-          } else {
-            Navigator.pushReplacementNamed(context, AppRoutes.userHome);
-          }
-        } else {
+          final route = user.role.toUpperCase() == 'DOCTOR'
+              ? AppRoutes.doctorHome
+              : AppRoutes.userHome;
+
+          navigator.pushReplacementNamed(route);
+        } catch (e, stack) {
+          print("❌ User parsing failed: $e");
+          print(stack);
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid login credentials")),
+            const SnackBar(content: Text("Login failed: Invalid user data")),
           );
         }
-      } else {
-        final msg = res['message'] ?? 'Login failed';
+      },
+      onApiError: (res) {
+        if (!mounted) return;
+        final msg =
+            (res as Map<String, dynamic>?)?['message'] ?? 'Login failed';
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Error: $msg")));
-      }
-    } catch (e) {
-      print('Login Error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Network / Server error: $e")));
-    } finally {
-      setState(() => _isLoading = false);
-    }
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      },
+      onException: (e) {
+        if (!mounted) return;
+        print('Login Exception: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Network / Server error: $e")));
+      },
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -136,10 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 60),
-              const CircleAvatar(
-                radius: 50,
-                // backgroundImage: AssetImage('assets/health_logo.png'),
-              ),
+              const CircleAvatar(radius: 50),
               const SizedBox(height: 40),
               TextFormField(
                 controller: _emailController,
@@ -203,20 +211,13 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 30),
               TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Forgot password clicked")),
-                  );
+                  Navigator.pushNamed(context, '/forgot-password');
                 },
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/forgot-password');
-                  },
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.secondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),

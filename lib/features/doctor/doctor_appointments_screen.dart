@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
-import 'package:healthcare/core/widgets/retry_loader.dart';
-import 'package:healthcare/core/widgets/server_gaurd.dart';
+import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
+import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
-import 'package:provider/provider.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
@@ -21,84 +23,85 @@ class DoctorAppointmentsScreen extends StatefulWidget {
 class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   List<Appointment> bookings = [];
   bool _loading = true;
-  String? error;
-  bool _appointmentsLoaded = false;
+  String? _error;
 
   final AppointmentService service = AppointmentService();
-  late ReachabilityController reachability;
 
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      reachability = context.read<ReachabilityController>();
-
-      // If server is reachable, load appointments
-      if (reachability.isServerReachable) {
-        _appointmentsLoaded = true;
-        _loadAppointments();
-      } else {
-        setState(() => _loading = false);
-      }
-
-      // Listen for server coming back online
-      reachability.addListener(_handleReachabilityChange);
-    });
-  }
-
-  void _handleReachabilityChange() {
-    if (reachability.isServerReachable && !_appointmentsLoaded) {
-      _appointmentsLoaded = true;
-      _loadAppointments();
-    }
-  }
-
-  @override
-  void dispose() {
-    reachability.removeListener(_handleReachabilityChange);
-    super.dispose();
+    _loadAppointments();
   }
 
   Future<void> _loadAppointments() async {
-    setState(() {
-      _loading = true;
-      error = null;
-    });
+    await NetworkHelper().safeCall(
+      context,
+      () => service.getUserAppointments(),
+      onSuccess: (res) {
+        setState(() {
+          final data = res['data'] as List<dynamic>;
+          bookings = data.map((e) => Appointment.fromJson(e)).toList();
+          _loading = false;
+        });
+      },
+      onApiError: (res) {
+        final map = res as Map<String, dynamic>?;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(map?['message'] ?? 'Load failed')),
+        );
+      },
+      onException: (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      },
+    );
+  }
 
-    try {
-      final res = await service.getUserAppointments();
-      setState(() {
-        final data =
-            res['data'] as List<dynamic>; // cast to List<dynamic> first
-        bookings = data.map((e) => Appointment.fromJson(e)).toList();
-        // bookings = data;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        _loading = false;
-      });
-    }
+  Future<void> _refreshAppointments() async {
+    await _loadAppointments();
+    Fluttertoast.showToast(
+      msg: "Appointments updated!",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.TOP,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
   }
 
   Future<void> handleStatusUpdate(String id, String status) async {
-    if (!reachability.isServerReachable) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Server unreachable")));
-      return;
-    }
-
-    final ok = await service.updateAppointmentStatus(
-      appointmentId: id,
-      status: status,
+    await NetworkHelper().safeCall(
+      context,
+      () => service.updateAppointmentStatus(appointmentId: id, status: status),
+      onSuccess: (_) {
+        setState(() {
+          final index = bookings.indexWhere((b) => b.id == id);
+          if (index != -1) bookings[index].status = status;
+        });
+        if (status != 'STARTED') {
+          Fluttertoast.showToast(
+            msg: "Appointment has been ${status.toLowerCase()}",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: status == "REJECTED" ? Colors.red : Colors.green,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+        }
+      },
+      onApiError: (res) {
+        final map = res as Map<String, dynamic>?;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(map?['message'] ?? 'Update failed')),
+        );
+      },
+      onException: (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      },
     );
-
-    if (ok) {
-      _loadAppointments();
-    }
   }
 
   Color _statusColor(String status) {
@@ -114,87 +117,16 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     }
   }
 
-  // -----------------------------------------
-  // WRAP EVERYTHING WITH SERVER GUARD HERE
-  // -----------------------------------------
-  @override
-  Widget build(BuildContext context) {
-    reachability = context.watch<ReachabilityController>();
+  bool _isAppointmentExpired(Appointment booking) =>
+      DateTime.now().isAfter(booking.slot.startDateTime);
 
-    return ServerGuard(onRetry: _loadAppointments, child: _buildMainUI());
-  }
-
-  // -----------------------------------------
-  // MAIN UI (ServerGuard shows offline UI)
-  // -----------------------------------------
-  Widget _buildMainUI() {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (error != null) {
-      return RetryLoader(
-        isLoading: false,
-        hasError: true,
-        errorMessage: error ?? "Something went wrong",
-        onRetry: _loadAppointments,
-        child: const SizedBox(),
-      );
-    }
-
-    if (bookings.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF6FAF9),
-        body: Center(
-          child: Text(
-            "No appointments available",
-            style: TextStyle(fontSize: 18, color: Colors.grey[700]),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6FAF9),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            "Patient Appointments",
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          ...bookings.map((booking) {
-            return AppointmentCard(
-              avatar: const CircleAvatar(
-                radius: 28,
-                backgroundImage: NetworkImage(
-                  'https://cdn-icons-png.flaticon.com/512/847/847969.png',
-                ),
-              ),
-              title: booking.patient.name,
-              subtitle: "Age: ${booking.age} | Reason: ${booking.reason}",
-              status: booking.status,
-              statusColor: _statusColor(booking.status),
-              date: booking.slot.dateLabel,
-              timeRange:
-                  "${booking.slot.startTimeLabel} - ${booking.slot.endTimeLabel}",
-              actionButtons: _renderActions(booking),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  // -----------------------------------------
-  // ACTION BUTTONS CLEANED
-  // -----------------------------------------
   Widget _renderActions(Appointment booking) {
-    final status = booking.status.toLowerCase();
+    final status = booking.status.toUpperCase();
+    final isExpired = _isAppointmentExpired(booking);
 
-    if (status == 'pending') {
+    if (status == "ACCEPTED" && isExpired) return const SizedBox.shrink();
+
+    if (status == "PENDING") {
       return Row(
         children: [
           Expanded(
@@ -208,7 +140,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: GFButton(
-              onPressed: () => handleStatusUpdate(booking.id, "CANCELLED"),
+              onPressed: () => handleStatusUpdate(booking.id, "REJECTED"),
               text: "Reject",
               color: Colors.red,
               shape: GFButtonShape.pills,
@@ -218,7 +150,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
     }
 
-    if (status == 'accepted') {
+    if (status == "ACCEPTED") {
       return Row(
         children: [
           Expanded(
@@ -235,16 +167,21 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: GFButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VideoCallScreen(
-                    appointmentId: booking.id,
-                    doctorId: booking.doctor.id,
-                    patientId: booking.patient.id,
+              onPressed: () async {
+                await handleStatusUpdate(booking.id, "STARTED");
+                if (!mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoCallScreen(
+                      appointmentId: booking.id,
+                      doctorId: booking.doctor.id,
+                      patientId: booking.patient.id,
+                      isDoctor: true,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
               text: "Start Call",
               color: Colors.blue,
               shape: GFButtonShape.pills,
@@ -254,6 +191,131 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
     }
 
+    if (status == "STARTED") {
+      return Row(
+        children: [
+          Expanded(
+            child: GFButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VideoCallScreen(
+                    appointmentId: booking.id,
+                    doctorId: booking.doctor.id,
+                    patientId: booking.patient.id,
+                    isDoctor: true,
+                  ),
+                ),
+              ),
+              text: "Join Call",
+              color: Colors.green,
+              shape: GFButtonShape.pills,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GFButton(
+              onPressed: () async {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text("Complete Appointment"),
+                    content: const Text(
+                      "Are you sure you want to complete the appointment?",
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text("No"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text("Yes"),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) handleStatusUpdate(booking.id, "COMPLETED");
+              },
+              text: "Complete",
+              color: Colors.orange,
+              shape: GFButtonShape.pills,
+            ),
+          ),
+        ],
+      );
+    }
+
     return const SizedBox.shrink();
+  }
+
+  Widget _buildAppointmentList() {
+    if (bookings.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: const Center(
+              child: Text(
+                "No appointments available",
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          "Patient Appointments",
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        ...bookings.map((b) {
+          final isExpired = _isAppointmentExpired(b);
+          final status = b.status.toUpperCase();
+          final displayStatus = (isExpired && status != "COMPLETED")
+              ? "EXPIRED"
+              : status;
+
+          return AppointmentCard(
+            avatar: CircleAvatar(
+              radius: 28,
+              child: SafeAvatar(
+                imageUrl: ImageUtils.resolve(b.patient.profileImage),
+                size: 120,
+              ),
+            ),
+            title: b.patient.name,
+            subtitle: "Age: ${b.age} | Reason: ${b.reason}",
+            status: displayStatus,
+            statusColor: displayStatus == "EXPIRED"
+                ? Colors.grey
+                : _statusColor(displayStatus),
+            date: b.slot.dateLabel,
+            timeRange: "${b.slot.startTimeLabel} - ${b.slot.endTimeLabel}",
+            actionButtons: _renderActions(b),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NetworkAwareScaffold(
+      error: _error,
+      loading: _loading,
+      onRetry: _refreshAppointments,
+      child: RefreshIndicator(
+        onRefresh: _refreshAppointments,
+        child: _buildAppointmentList(),
+      ),
+    );
   }
 }

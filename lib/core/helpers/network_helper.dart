@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class NetworkHelper {
   // Singleton instance
@@ -28,8 +30,12 @@ class NetworkHelper {
     void Function(Object e)? onException,
   }) async {
     try {
-      // 1️⃣ Check server reachability
       final reachable = await _authService.isServerReachable();
+
+      if (context.mounted) {
+        context.read<ReachabilityController>().updateReachability(reachable);
+      }
+
       if (!reachable) {
         if (context.mounted) {
           ScaffoldMessenger.of(
@@ -39,10 +45,8 @@ class NetworkHelper {
         return null;
       }
 
-      // 2️⃣ Perform API call
       final result = await apiCall();
 
-      // 3️⃣ Handle success or API-level error
       if (result is Map<String, dynamic> && result['success'] == true) {
         if (onSuccess != null) onSuccess(result);
       } else {
@@ -52,6 +56,7 @@ class NetworkHelper {
           final message = (result is Map && result['message'] != null)
               ? result['message']
               : "Unknown error";
+
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(message.toString())));
@@ -63,7 +68,6 @@ class NetworkHelper {
       print('Exception: $e');
       print('Stack trace: $stackTrace');
 
-      // 4️⃣ Handle exceptions
       if (onException != null) {
         onException(e);
       } else if (context.mounted) {

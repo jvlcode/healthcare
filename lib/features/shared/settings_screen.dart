@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/features/shared/change_password_screen.dart';
 import 'package:healthcare/features/shared/edit_profile_screen.dart';
 
@@ -37,10 +38,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Icons.person,
             title: "Edit Profile",
             subtitle: "Update your name, email, and photo",
-            onTap: () {
+            onTap: () async {
+              final user = await SessionManager.getCurrentUser();
+
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                MaterialPageRoute(
+                  builder: (_) => EditProfileScreen(prefilledUser: user),
+                ),
               );
             },
           ),

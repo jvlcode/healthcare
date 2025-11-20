@@ -4,36 +4,25 @@ import 'package:healthcare/app/session/reachability_controller.dart';
 
 class ServerGuard extends StatelessWidget {
   final Widget child;
-  final Future<void> Function()? onRetry;
 
-  const ServerGuard({super.key, required this.child, this.onRetry});
+  const ServerGuard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final reachability = context.watch<ReachabilityController>();
+    final reachable = context.watch<ReachabilityController>().isServerReachable;
 
-    // 1) offline screen
-    if (!reachability.isServerReachable) {
-      return Scaffold(
+    if (!reachable) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF6FAF9),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.cloud_off, size: 60, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                "Server unreachable",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  await reachability.checkServer();
-                  if (onRetry != null && reachability.isServerReachable) {
-                    await onRetry!();
-                  }
-                },
-                child: const Text("Retry"),
+              Icon(Icons.cloud_off, size: 60, color: Colors.grey),
+              SizedBox(height: 10),
+              Text(
+                "Server not reachable",
+                style: TextStyle(color: Colors.grey),
               ),
             ],
           ),
@@ -41,7 +30,6 @@ class ServerGuard extends StatelessWidget {
       );
     }
 
-    // 2) normal content
     return child;
   }
 }

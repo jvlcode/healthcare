@@ -7,7 +7,7 @@ class SessionManager {
   static final _secureStorage = FlutterSecureStorage();
 
   static Future<void> saveSession(
-    User user,
+    Map<String, dynamic> user,
     String accessToken,
     String refreshToken,
   ) async {
@@ -15,7 +15,7 @@ class SessionManager {
     await _secureStorage.write(key: 'refresh_token', value: refreshToken);
 
     final userBox = await Hive.openBox('userBox');
-    await userBox.put('user', user.toJson());
+    await userBox.put('user', user);
   }
 
   static Future<void> clearSession() async {
@@ -35,6 +35,8 @@ class SessionManager {
   static Future<User?> getCurrentUser() async {
     final userBox = await Hive.openBox('userBox');
     final userJson = userBox.get('user');
+    print("getCurrentUser");
+    print(userJson);
     if (userJson != null) {
       return User.fromJson(Map<String, dynamic>.from(userJson));
     }
@@ -80,6 +82,8 @@ class SessionManager {
     final accessToken = await getAccessToken();
     final refreshToken = await getRefreshToken();
     final user = await getCurrentUser();
+    print("initializeSession");
+    print(user);
 
     if (accessToken == null || user == null) return null;
     final authService = AuthService();
@@ -102,5 +106,13 @@ class SessionManager {
       });
     }
     return user;
+  }
+
+  static Future<void> updateSessionTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await _secureStorage.write(key: 'access_token', value: accessToken);
+    await _secureStorage.write(key: 'refresh_token', value: refreshToken);
   }
 }
