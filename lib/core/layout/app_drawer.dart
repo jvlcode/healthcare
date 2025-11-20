@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
+import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -103,13 +104,23 @@ class _AppDrawerState extends State<AppDrawer> {
                   label: 'Logout',
                   iconColor: Colors.redAccent,
                   onTap: () async {
-                    await SessionManager.clearSession();
-                    // Remove all routes and navigate to login
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/login',
-                      (route) => false,
+                    final confirmed = await showConfirmationDialog(
+                      context: context,
+                      title: 'Logout',
+                      message: 'Are you sure you want to logout?',
+                      confirmText: 'Logout',
+                      cancelText: 'Cancel',
+                      confirmColor: Colors.redAccent,
                     );
+
+                    if (confirmed) {
+                      await SessionManager.clearSession();
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
               ],

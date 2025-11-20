@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/services/slot_service.dart';
@@ -92,11 +93,11 @@ class _DoctorSlotManagementScreenState
 
   String _format12(TimeOfDay t) => t.format(context);
 
-  void _showToast(String msg, {Color bg = Colors.red}) {
+  void _showToast(String msg, {Color bg = Colors.red, position = "center"}) {
     Fluttertoast.showToast(
       msg: msg,
       toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.CENTER,
+      gravity: position == 'top' ? ToastGravity.TOP : ToastGravity.CENTER,
       backgroundColor: bg,
       textColor: Colors.white,
       fontSize: 16.0,
@@ -224,6 +225,18 @@ class _DoctorSlotManagementScreenState
     final slot = slotsByDate[date]![index];
     if (!slot.available) return _showToast("Cannot delete booked slot");
 
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: "Delete Slot",
+      message: "Are you sure you want to delete this slot?",
+      confirmText: "Yes",
+      cancelText: "No",
+      confirmColor: Colors.red,
+    );
+
+    if (!confirmed) {
+      return;
+    }
     await NetworkHelper().safeCall<Map<String, dynamic>>(
       context,
       () => service.deleteSlot(slot.id),
@@ -269,7 +282,7 @@ class _DoctorSlotManagementScreenState
     return RefreshIndicator(
       onRefresh: () async {
         await _loadSlots();
-        _showToast("Slots updated!", bg: Colors.green);
+        _showToast("Slots updated!", bg: Colors.green, position: "top");
       },
       child: Padding(
         padding: const EdgeInsets.all(16),

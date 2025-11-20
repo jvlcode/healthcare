@@ -6,6 +6,7 @@ import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
+import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
@@ -140,7 +141,20 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: GFButton(
-              onPressed: () => handleStatusUpdate(booking.id, "REJECTED"),
+              onPressed: () async {
+                final confirmed = await showConfirmationDialog(
+                  context: context,
+                  title: "Reject Appointment",
+                  message: "Are you sure you want to reject this appointment?",
+                  confirmText: "Yes",
+                  cancelText: "No",
+                  confirmColor: Colors.red,
+                );
+
+                if (confirmed) {
+                  handleStatusUpdate(booking.id, "REJECTED");
+                }
+              },
               text: "Reject",
               color: Colors.red,
               shape: GFButtonShape.pills,
