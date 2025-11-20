@@ -82,36 +82,47 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppHeader(subtitle: "Your patient care dashboard"),
-      drawer: const AppDrawer(),
-      body: Column(
-        children: [
-          Expanded(
-            child: IndexedStack(children: _screens, index: _currentIndex),
-          ),
-        ],
-      ),
-      bottomNavigationBar: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (_currentIndex != 0) {
+          // If not on 0th tab, go back to 0th tab instead of exiting
+          setState(() => _currentIndex = 0);
+          return; // Prevent pop
+        }
+        // If already on 0th tab, allow pop (exit app)
+      },
+      child: Scaffold(
+        appBar: AppHeader(subtitle: "Your patient care dashboard"),
+        drawer: const AppDrawer(),
+        body: Column(
+          children: [
+            Expanded(
+              child: IndexedStack(children: _screens, index: _currentIndex),
+            ),
+          ],
         ),
-        child: Container(
-          color: theme.colorScheme.primary,
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            backgroundColor: Colors.transparent,
-            selectedItemColor: theme.colorScheme.secondary,
-            unselectedItemColor: Colors.white70,
-            type: BottomNavigationBarType.fixed,
+        bottomNavigationBar: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          child: Container(
+            color: theme.colorScheme.primary,
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: theme.colorScheme.secondary,
+              unselectedItemColor: Colors.white70,
+              type: BottomNavigationBarType.fixed,
 
-            // Prevent switching when pending
-            onTap: _isPending
-                ? null // no navigation allowed
-                : (index) => setState(() => _currentIndex = index),
+              // Prevent switching when pending
+              onTap: _isPending
+                  ? null // no navigation allowed
+                  : (index) => setState(() => _currentIndex = index),
 
-            items: _navItems,
+              items: _navItems,
+            ),
           ),
         ),
       ),
