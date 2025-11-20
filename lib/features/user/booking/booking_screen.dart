@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
@@ -164,10 +165,7 @@ class _BookingScreenState extends State<BookingScreen> {
         reason: reasonController.text,
       ),
       onSuccess: (res) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const BookingSuccessScreen()),
-        );
+        navigateSlideLeft(context, page: BookingSuccessScreen());
       },
       onApiError: (res) {
         final msg = res['message'] ?? 'Booking failed';

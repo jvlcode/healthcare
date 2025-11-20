@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
@@ -239,12 +240,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             const SizedBox(height: 25),
             BookSessionButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BookingScreen(doctor: doctor),
-                  ),
-                );
+                navigateSlideLeft(context, page: BookingScreen(doctor: doctor));
               },
             ),
             const SizedBox(height: 25),

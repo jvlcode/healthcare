@@ -47,26 +47,37 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppHeader(subtitle: "Your support for well-being"),
-      drawer: const AppDrawer(),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (_currentIndex != 0) {
+          // If not on 0th tab, go back to 0th tab instead of exiting
+          setState(() => _currentIndex = 0);
+          return; // Prevent pop
+        }
+        // If already on 0th tab, allow pop (exit app)
+      },
+      child: Scaffold(
+        appBar: AppHeader(subtitle: "Your support for well-being"),
+        drawer: const AppDrawer(),
+        body: IndexedStack(index: _currentIndex, children: _screens),
 
-      bottomNavigationBar: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        child: Container(
-          color: theme.colorScheme.primary,
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            backgroundColor: Colors.transparent,
-            selectedItemColor: theme.colorScheme.secondary,
-            unselectedItemColor: Colors.white70,
-            type: BottomNavigationBarType.fixed,
-            items: _navItems,
+        bottomNavigationBar: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          child: Container(
+            color: theme.colorScheme.primary,
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              backgroundColor: Colors.transparent,
+              selectedItemColor: theme.colorScheme.secondary,
+              unselectedItemColor: Colors.white70,
+              type: BottomNavigationBarType.fixed,
+              items: _navItems,
+            ),
           ),
         ),
       ),

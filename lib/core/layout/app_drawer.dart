@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -84,7 +85,8 @@ class _AppDrawerState extends State<AppDrawer> {
                   label: 'Video Call History',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, "/videocallhistory");
+                    navigateSlideLeft(context, routeName: "/videocallhistory");
+                    // Navigator.pushNamed(context, "/videocallhistory");
                   },
                 ),
                 _drawerItem(

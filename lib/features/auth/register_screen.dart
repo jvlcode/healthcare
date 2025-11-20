@@ -1,9 +1,13 @@
-// register_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/app/session/session_manager.dart';
+import 'package:hive/hive.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hive/hive.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,30 +18,30 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   int _step = 0;
-  final List<GlobalKey<FormState>> _formKeys = [
-    GlobalKey<FormState>(), // step 0
-    GlobalKey<FormState>(), // step 1
-    GlobalKey<FormState>(), // step 2
+
+  final _formKeys = [
+    GlobalKey<FormState>(), // Step 0
+    GlobalKey<FormState>(), // Step 1
+    GlobalKey<FormState>(), // Step 2
   ];
 
   // Controllers
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _otp = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
 
-  // UI state
+  // UI State
   bool _isDoctor = false;
   bool _otpSent = false;
   bool _isVerifying = false;
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
-  bool _isLoading = false;
+  bool _loading = false;
 
-  // --- Input decoration used across fields
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _field(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
@@ -55,29 +59,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           width: 1.5,
         ),
       ),
-      labelStyle: const TextStyle(fontSize: 15),
     );
   }
 
-  // --- handle next; validate only current step
   void _nextStep() {
     final form = _formKeys[_step].currentState!;
     if (!form.validate()) return;
 
-    if (_step == 1 && _otpSent == false) {
-      // If on phone step and OTP not sent, require sending OTP first
+    if (_step == 1 && !_otpSent) {
       _sendOtp();
       return;
     }
 
-    if (_step == 1 && _otpSent == true) {
-      // If OTP field exists validate; for this flow we'll require verification before proceeding
-      if (_otpController.text.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Enter OTP or resend")));
-        return;
-      }
+    if (_step == 1 && _otpSent) {
       _verifyOtp();
       return;
     }
@@ -87,7 +81,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // final step -> register
     _registerUser();
   }
 
@@ -95,160 +88,120 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_step > 0) setState(() => _step--);
   }
 
-  // --- simulated OTP send (replace with backend /auth/send-otp)
   void _sendOtp() {
-    if (_phoneController.text.trim().length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter valid 10-digit phone")),
-      );
+    if (_phone.text.trim().length != 10) {
+      _toast("Enter valid 10-digit phone");
       return;
     }
-    // Ideally call backend to send OTP here.
     setState(() => _otpSent = true);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("OTP sent (simulated)")));
+    _toast("OTP Sent (Simulated)");
   }
 
-  // --- simulated verify (replace with backend /auth/verify-otp)
   void _verifyOtp() {
     setState(() => _isVerifying = true);
     Future.delayed(const Duration(seconds: 1), () {
       setState(() {
         _isVerifying = false;
-        _step = 2; // move to final step
+        _step = 2;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Phone verified (simulated)")),
-      );
+      _toast("Phone Verified (Simulated)");
     });
   }
 
-  // --- register API call
   Future<void> _registerUser() async {
     final form = _formKeys[_step].currentState!;
     if (!form.validate()) return;
 
-    // For doctor, we may want specialization and qualifications (optional fields)
-    final role = _isDoctor ? "DOCTOR" : "PATIENT";
-
-    setState(() => _isLoading = true);
+    setState(() => _loading = true);
 
     final user = User(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      role: role,
+      name: _name.text.trim(),
+      email: _email.text.trim(),
+      phone: _phone.text.trim(),
+      role: _isDoctor ? "DOCTOR" : "PATIENT",
     );
 
-    final password = _passwordController.text.trim();
+    final password = _password.text.trim();
 
     try {
-      final authService = AuthService();
-      final res = await authService.register(user, password);
-
-      if (res['success']) {
-        final data = res['data'] as Map<String, dynamic>?;
-        if (data != null) {
-          final userJson = data['user'] as Map<String, dynamic>?;
-          final accessToken = data['accessToken']?.toString();
-          final refreshToken = data['refreshToken']?.toString() ?? '';
-
-          if (userJson != null && accessToken != null) {
-            final registeredUser = User.fromJson(userJson);
-
-            final secureStorage = FlutterSecureStorage();
-            await secureStorage.write(key: 'access_token', value: accessToken);
-            await secureStorage.write(
-              key: 'refresh_token',
-              value: refreshToken,
-            );
-
-            final userBox = await Hive.openBox('userBox');
-            await userBox.put('user', registeredUser.toJson());
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Registration successful")),
-            );
-
-            Navigator.pushReplacementNamed(
-              context,
-              registeredUser.role.toUpperCase() == 'DOCTOR'
-                  ? '/doctor'
-                  : '/user',
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Invalid registration response")),
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Invalid registration response")),
-          );
-        }
-      } else {
-        final msg =
-            res['message'] ??
-            (res['message'] != null
-                ? _mapErrorsToString(res['message'])
-                : "Registration failed");
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $msg")));
-      }
-    } catch (e) {
-      print(e);
-      ScaffoldMessenger.of(
+      await NetworkHelper().safeCall(
         context,
-      ).showSnackBar(SnackBar(content: Text("Network error: $e")));
+        () => AuthService().register(user, password),
+        onSuccess: (res) async {
+          final data = res['data'];
+          if (data == null || data['user'] == null) {
+            _toast("Invalid API response");
+            return;
+          }
+
+          final token = data['accessToken']?.toString() ?? '';
+          final refresh = data['refreshToken']?.toString() ?? '';
+          final json = data['user'];
+          final registeredUser = User.fromJson(json);
+
+          // Save securely
+          // const store = FlutterSecureStorage();
+          // await store.write(key: 'access_token', value: token);
+          // await store.write(key: 'refresh_token', value: refresh);
+
+          // final box = await Hive.openBox('userBox');
+          // await box.put('user', registeredUser.toJson());
+          SessionManager.saveSession(json, token, refresh);
+
+          _toast("Registration Successful");
+
+          Navigator.pushReplacementNamed(
+            context,
+            registeredUser.role == "DOCTOR"
+                ? AppRoutes.doctorHome
+                : AppRoutes.userHome,
+          );
+        },
+        onApiError: (msg) => _toast(msg.toString()),
+        onException: (e) => _toast("Error: $e"),
+      );
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _loading = false);
     }
   }
 
-  String _mapErrorsToString(dynamic errors) {
-    // errors may be array or object; try best-effort mapping
-    if (errors is List) {
-      return errors
-          .map((e) {
-            if (e is Map && e['message'] != null) return e['message'];
-            return e.toString();
-          })
-          .join(", ");
-    } else if (errors is Map && errors['message'] != null)
-      return errors['message'];
-    return errors.toString();
+  void _toast(String msg) {
+    Fluttertoast.showToast(
+      msg: msg,
+      gravity: ToastGravity.TOP,
+      toastLength: Toast.LENGTH_SHORT,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _otpController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _name.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _otp.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Step widgets - use per-step Form keyed by _formKeys[index]
+    // --- Step widgets kept exactly the same to not affect UI ---
     final step0 = Form(
       key: _formKeys[0],
       child: Column(
         children: [
-          // Role selector
           Row(
             children: [
               Expanded(
                 child: ChoiceChip(
                   label: const Text("Patient"),
                   selected: !_isDoctor,
-                  onSelected: (v) =>
-                      setState(() => _isDoctor = !v ? true : false),
+                  onSelected: (v) => setState(() => _isDoctor = false),
                 ),
               ),
               const SizedBox(width: 10),
@@ -256,27 +209,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: ChoiceChip(
                   label: const Text("Doctor"),
                   selected: _isDoctor,
-                  onSelected: (v) => setState(() => _isDoctor = v),
+                  onSelected: (v) => setState(() => _isDoctor = true),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
           TextFormField(
-            controller: _nameController,
-            decoration: _inputDecoration('Full Name', Icons.person),
-            validator: (v) =>
-                v == null || v.trim().isEmpty ? 'Enter name' : null,
+            controller: _name,
+            decoration: _field("Full Name", Icons.person),
+            validator: (v) => v!.isEmpty ? "Enter name" : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: _emailController,
-            decoration: _inputDecoration('Email', Icons.email),
-            keyboardType: TextInputType.emailAddress,
+            controller: _email,
+            decoration: _field("Email", Icons.email),
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Enter email';
-              if (!RegExp(r'^[\w-]+@([\w-]+\.)+[\w]{2,4}$').hasMatch(v.trim()))
-                return 'Enter valid email';
+              if (v!.isEmpty) return "Enter email";
+              if (!RegExp(r'^[\w-]+@([\w-]+\.)+[\w]{2,4}$').hasMatch(v)) {
+                return "Enter valid email";
+              }
               return null;
             },
           ),
@@ -289,12 +241,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         children: [
           TextFormField(
-            controller: _phoneController,
-            decoration: _inputDecoration('Phone Number', Icons.phone),
-            keyboardType: TextInputType.phone,
-            validator: (v) => v == null || v.trim().length != 10
-                ? 'Enter 10-digit phone'
-                : null,
+            controller: _phone,
+            decoration: _field("Phone", Icons.phone),
+            validator: (v) => v!.length == 10 ? null : "Enter 10-digit phone",
           ),
           const SizedBox(height: 12),
           if (!_otpSent)
@@ -302,54 +251,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: _sendOtp,
               icon: const Icon(Icons.sms),
               label: const Text("Send OTP"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             )
-          else ...[
-            TextFormField(
-              controller: _otpController,
-              decoration: _inputDecoration('Enter OTP', Icons.verified),
-              keyboardType: TextInputType.number,
-              validator: (v) => v == null || v.isEmpty ? 'Enter OTP' : null,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _isVerifying ? null : _verifyOtp,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          else
+            Column(
+              children: [
+                TextFormField(
+                  controller: _otp,
+                  decoration: _field("Enter OTP", Icons.verified),
+                  validator: (v) => v!.isEmpty ? "Enter OTP" : null,
                 ),
-              ),
-              child: _isVerifying
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text("Verify OTP"),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _isVerifying ? null : _verifyOtp,
+                  child: _isVerifying
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("Verify OTP"),
+                ),
+              ],
             ),
-          ],
         ],
       ),
     );
 
-    // final step: if doctor collect specialization & qualifications before passwords
     final step2 = Form(
       key: _formKeys[2],
       child: Column(
         children: [
           TextFormField(
-            controller: _passwordController,
+            controller: _password,
             obscureText: !_isPasswordVisible,
-            decoration: _inputDecoration('Password', Icons.lock).copyWith(
+            decoration: _field("Password", Icons.lock).copyWith(
               suffixIcon: IconButton(
                 icon: Icon(
                   _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
@@ -358,48 +293,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     setState(() => _isPasswordVisible = !_isPasswordVisible),
               ),
             ),
-            validator: (v) =>
-                v == null || v.length < 6 ? 'Minimum 6 characters' : null,
+            validator: (v) => v!.length < 6 ? "Minimum 6 characters" : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
-            controller: _confirmPasswordController,
+            controller: _confirm,
             obscureText: !_isConfirmVisible,
-            decoration: _inputDecoration('Confirm Password', Icons.lock_outline)
-                .copyWith(
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isConfirmVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () =>
-                        setState(() => _isConfirmVisible = !_isConfirmVisible),
-                  ),
+            decoration: _field("Confirm Password", Icons.lock).copyWith(
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _isConfirmVisible ? Icons.visibility : Icons.visibility_off,
                 ),
+                onPressed: () =>
+                    setState(() => _isConfirmVisible = !_isConfirmVisible),
+              ),
+            ),
             validator: (v) =>
-                v != _passwordController.text ? 'Passwords do not match' : null,
+                v != _password.text ? "Passwords don't match" : null,
           ),
         ],
       ),
     );
 
-    // Main scaffold
     return Scaffold(
-      appBar: AppBar(title: const Text('Register'), centerTitle: true),
+      appBar: AppBar(title: const Text("Register"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           child: Column(
-            key: ValueKey<int>(_step),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            key: ValueKey(_step),
             children: [
-              // step indicator simple
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) {
-                  return Container(
+                children: List.generate(
+                  3,
+                  (i) => Container(
                     margin: const EdgeInsets.symmetric(horizontal: 6),
                     height: 8,
                     width: _step == i ? 26 : 12,
@@ -409,60 +338,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                  );
-                }),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
-              // header text
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  _step == 0
-                      ? 'Who are you?'
-                      : (_step == 1 ? 'Verify your phone' : 'Set a password'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 8),
+
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      if (_step == 0) step0,
-                      if (_step == 1) step1,
-                      if (_step == 2) step2,
-                    ],
-                  ),
+                  child: [step0, step1, step2][_step],
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _isLoading ? null : _nextStep,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading
+                onPressed: _loading ? null : _nextStep,
+                child: _loading
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2,
                         ),
                       )
-                    : Text(
-                        _step < 2 ? 'Next' : 'Register',
-                        style: const TextStyle(fontSize: 16),
-                      ),
+                    : Text(_step < 2 ? "Next" : "Register"),
               ),
-              const SizedBox(height: 12),
               if (_step > 0)
-                TextButton(onPressed: _prevStep, child: const Text('Back')),
+                TextButton(onPressed: _prevStep, child: const Text("Back")),
             ],
           ),
         ),

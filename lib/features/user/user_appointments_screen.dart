@@ -6,6 +6,7 @@ import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
@@ -106,10 +107,8 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF6F2),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VideoCallHistoryScreen()),
-        ),
+        onPressed: () =>
+            navigateSlideLeft(context, page: VideoCallHistoryScreen()),
         icon: const Icon(Icons.history, color: Colors.white),
         label: const Text("Video Call History"),
         backgroundColor: const Color(0xFF01312F),
@@ -182,15 +181,13 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: GFButton(
-                                    onPressed: () => Navigator.push(
+                                    onPressed: () => navigateSlideLeft(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (_) => VideoCallScreen(
-                                          appointmentId: booking.id,
-                                          doctorId: booking.doctor.id,
-                                          patientId: booking.patient.id,
-                                          isDoctor: false,
-                                        ),
+                                      page: VideoCallScreen(
+                                        appointmentId: booking.id,
+                                        doctorId: booking.doctor.id,
+                                        patientId: booking.patient.id,
+                                        isDoctor: false,
                                       ),
                                     ),
                                     text: "Join Call",

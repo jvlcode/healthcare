@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/features/shared/change_password_screen.dart';
 import 'package:healthcare/features/shared/edit_profile_screen.dart';
 
@@ -40,12 +41,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: "Update your name, email, and photo",
             onTap: () async {
               final user = await SessionManager.getCurrentUser();
-
-              Navigator.push(
+              navigateSlideLeft(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => EditProfileScreen(prefilledUser: user),
-                ),
+                page: EditProfileScreen(prefilledUser: user),
               );
             },
           ),
@@ -54,10 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: "Change Password",
             subtitle: "Update your password securely",
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-              );
+              navigateSlideLeft(context, page: ChangePasswordScreen());
             },
           ),
 

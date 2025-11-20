@@ -1,3 +1,4 @@
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:healthcare/features/videocall/agora_service.dart';
 import 'package:healthcare/services/videocall_service.dart';
@@ -63,6 +64,15 @@ class VideoCallController extends ChangeNotifier {
         await agora.initialize(
           onUserJoined: (remote) {
             if (_disposed) return;
+
+            // Register remote video
+            agora.engine.setupRemoteVideo(
+              VideoCanvas(
+                uid: remote,
+                renderMode: RenderModeType.renderModeFit,
+              ),
+            );
+
             _safeUpdate(() => remoteUid = remote);
             onRemoteJoined?.call(remote);
           },
@@ -73,6 +83,11 @@ class VideoCallController extends ChangeNotifier {
         );
         _initialized = true;
       }
+
+      // IMPORTANT STEPS
+      await agora.engine.enableVideo();
+      await agora.engine.enableLocalVideo(true);
+      await agora.engine.startPreview();
 
       await agora.joinChannel(token: token, channel: channelName, uid: uid);
 
@@ -110,8 +125,6 @@ class VideoCallController extends ChangeNotifier {
       if (_initialized) {
         await agora.engine.leaveChannel();
         await agora.engine.stopPreview();
-        await agora.engine.muteLocalAudioStream(true);
-        await agora.engine.muteLocalVideoStream(true);
       }
 
       _safeUpdate(() {

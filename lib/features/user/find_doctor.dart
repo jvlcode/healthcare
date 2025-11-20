@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
@@ -122,12 +123,7 @@ class _FindDoctorState extends State<FindDoctor> {
           children: [
             BookSessionButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BookingScreen(doctor: doctor),
-                  ),
-                );
+                navigateSlideLeft(context, page: BookingScreen(doctor: doctor));
               },
             ),
             const SizedBox(height: 20),
@@ -143,13 +139,11 @@ class _FindDoctorState extends State<FindDoctor> {
                   doctor: doctors[index],
                   isSelected: index == selectedDoctorIndex,
                   onTap: () {
-                    Navigator.push(
+                    navigateSlideLeft(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            DoctorProfileScreen(doctor: doctors[index]),
-                      ),
+                      page: DoctorProfileScreen(doctor: doctors[index]),
                     );
+                    ;
                   },
                 ),
               ),

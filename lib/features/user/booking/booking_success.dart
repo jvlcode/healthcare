@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/features/user/user_appointments_screen.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
@@ -166,10 +168,19 @@ class BookingSuccessScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(
+                      Fluttertoast.showToast(
+                        msg: "Booking Successfully Completed",
+                        gravity: ToastGravity.TOP,
+                        toastLength: Toast.LENGTH_SHORT,
+                        backgroundColor: Colors.green,
+                        textColor: Colors.white,
+                        fontSize: 16.0,
+                      );
+                      navigateSlideLeft(
                         context,
-                        '/user',
-                        (route) => false, // removes all previous routes
+                        routeName: "/user",
+                        removeAllPrevious: true,
+                        type: SlideNavType.pushAndRemoveUntil,
                         arguments: 1,
                       );
                     },
