@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 
@@ -63,9 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (res['success'] != true || data == null) {
           final msg = res['message'] ?? 'Login failed';
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(msg)));
+            ToastUtil.error(msg);
           }
           return;
         }
@@ -76,9 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (userJson == null || accessToken == null) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Invalid login credentials")),
-            );
+            ToastUtil.success("Invalid login credentials");
           }
           return;
         }
@@ -89,9 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           if (!mounted) return;
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Login successful")));
+          ToastUtil.success("Login successful");
 
           final route = user.role.toUpperCase() == 'DOCTOR'
               ? AppRoutes.doctorHome

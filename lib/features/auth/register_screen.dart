@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:hive/hive.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/models/user_model.dart';
@@ -90,11 +91,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _sendOtp() {
     if (_phone.text.trim().length != 10) {
-      _toast("Enter valid 10-digit phone");
+      ToastUtil.info("Enter valid 10-digit phone");
       return;
     }
     setState(() => _otpSent = true);
-    _toast("OTP Sent (Simulated)");
+    ToastUtil.success("OTP Sent");
   }
 
   void _verifyOtp() {
@@ -104,7 +105,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isVerifying = false;
         _step = 2;
       });
-      _toast("Phone Verified (Simulated)");
     });
   }
 
@@ -131,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         onSuccess: (res) async {
           final data = res['data'];
           if (data == null || data['user'] == null) {
-            _toast("Invalid API response");
+            ToastUtil.error("Invalid API response");
             return;
           }
 
@@ -149,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           // await box.put('user', registeredUser.toJson());
           SessionManager.saveSession(json, token, refresh);
 
-          _toast("Registration Successful");
+          ToastUtil.success("Registration Successful");
 
           Navigator.pushReplacementNamed(
             context,
@@ -158,23 +158,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 : AppRoutes.userHome,
           );
         },
-        onApiError: (msg) => _toast(msg.toString()),
-        onException: (e) => _toast("Error: $e"),
+        onApiError: (msg) => ToastUtil.error(msg.toString()),
+        onException: (e) =>
+            ToastUtil.error(e.toString(), gravity: ToastGravity.CENTER),
       );
     } finally {
       setState(() => _loading = false);
     }
-  }
-
-  void _toast(String msg) {
-    Fluttertoast.showToast(
-      msg: msg,
-      gravity: ToastGravity.TOP,
-      toastLength: Toast.LENGTH_SHORT,
-      backgroundColor: Colors.black,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
   }
 
   @override

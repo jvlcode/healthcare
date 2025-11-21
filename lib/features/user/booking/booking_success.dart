@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:intl/intl.dart';
 
@@ -164,13 +165,9 @@ class BookingSuccessScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Fluttertoast.showToast(
-                        msg: "Booking Successfully Completed",
+                      ToastUtil.success(
+                        "Booking Successfully Completed",
                         gravity: ToastGravity.TOP,
-                        toastLength: Toast.LENGTH_SHORT,
-                        backgroundColor: Colors.green,
-                        textColor: Colors.white,
-                        fontSize: 16.0,
                       );
 
                       navigateSlideLeft(

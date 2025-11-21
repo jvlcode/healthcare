@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
@@ -62,13 +63,7 @@ class _FindDoctorState extends State<FindDoctor> {
 
   Future<void> _refreshDoctors() async {
     await _fetchDoctors();
-    Fluttertoast.showToast(
-      msg: "Information updated!",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.TOP,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-    );
+    ToastUtil.info("Information updated!", gravity: ToastGravity.TOP);
   }
 
   @override

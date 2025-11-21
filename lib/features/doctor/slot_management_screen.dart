@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/models/slot_model.dart';
@@ -93,17 +94,6 @@ class _DoctorSlotManagementScreenState
 
   String _format12(TimeOfDay t) => t.format(context);
 
-  void _showToast(String msg, {Color bg = Colors.red, position = "center"}) {
-    Fluttertoast.showToast(
-      msg: msg,
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: position == 'top' ? ToastGravity.TOP : ToastGravity.CENTER,
-      backgroundColor: bg,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-  }
-
   void _showError(dynamic e) {
     if (!mounted) return;
     setState(() {
@@ -123,7 +113,7 @@ class _DoctorSlotManagementScreenState
       TimeOfDay(hour: start.hour + 1, minute: start.minute),
     );
     if (end == null || _compareTimes(start, end) >= 0) {
-      _showToast("End time must be after start time");
+      ToastUtil.error("End time must be after start time");
       return;
     }
 
@@ -135,7 +125,7 @@ class _DoctorSlotManagementScreenState
           (s) => s.startTime == newStart && s.endTime == newEnd,
         ) ??
         false) {
-      _showToast("A slot already exists with this time!", bg: Colors.orange);
+      ToastUtil.info("A slot already exists with this time!");
       return;
     }
 
@@ -150,7 +140,7 @@ class _DoctorSlotManagementScreenState
         final slotId =
             (res['data'] as Map<String, dynamic>?)?['_id'] ??
             (res['data'] as Map<String, dynamic>?)?['id'];
-        if (slotId == null) return _showToast("Failed to get slot ID");
+        if (slotId == null) return ToastUtil.error("Failed to get slot ID");
 
         final slot = Slot(
           id: slotId,
@@ -164,24 +154,24 @@ class _DoctorSlotManagementScreenState
         );
 
         setState(() => slotsByDate.putIfAbsent(date, () => []).add(slot));
-        _showToast("Slot created successfully", bg: Colors.green);
+        ToastUtil.success("Slot created successfully");
       },
-      onApiError: (res) => _showToast(
+      onApiError: (res) => ToastUtil.error(
         (res as Map<String, dynamic>?)?['message'] ?? "Failed to create slot",
       ),
-      onException: (e) => _showToast("Error: $e"),
+      onException: (e) => ToastUtil.error("Error: $e"),
     );
   }
 
   void _editSlot(DateTime date, int index) async {
     final slot = slotsByDate[date]![index];
-    if (!slot.available) return _showToast("Slot already booked!");
+    if (!slot.available) return ToastUtil.error("Slot already booked!");
 
     final start = await _pickTime(const TimeOfDay(hour: 9, minute: 0));
     if (start == null) return;
     final end = await _pickTime(TimeOfDay(hour: start.hour + 1, minute: 0));
     if (end == null || _compareTimes(start, end) >= 0)
-      return _showToast("Invalid time range");
+      return ToastUtil.error("Invalid time range");
 
     final newStart = _format24(start);
     final newEnd = _format24(end);
@@ -189,10 +179,7 @@ class _DoctorSlotManagementScreenState
     if (slotsByDate[date]!.any(
       (s) => s.id != slot.id && s.startTime == newStart && s.endTime == newEnd,
     )) {
-      return _showToast(
-        "Another slot already exists with this time!",
-        bg: Colors.orange,
-      );
+      return ToastUtil.info("Another slot already exists with this time!");
     }
 
     await NetworkHelper().safeCall(
@@ -212,18 +199,18 @@ class _DoctorSlotManagementScreenState
             endTimeLabel: _format12(end),
           ),
         );
-        _showToast("Slot updated", bg: Colors.green);
+        ToastUtil.success("Slot updated");
       },
-      onApiError: (res) => _showToast(
+      onApiError: (res) => ToastUtil.error(
         (res as Map<String, dynamic>?)?['message'] ?? "Failed to update slot",
       ),
-      onException: (e) => _showToast("Error: $e"),
+      onException: (e) => ToastUtil.error("Error: $e"),
     );
   }
 
   void _deleteSlot(DateTime date, int index) async {
     final slot = slotsByDate[date]![index];
-    if (!slot.available) return _showToast("Cannot delete booked slot");
+    if (!slot.available) return ToastUtil.error("Cannot delete booked slot");
 
     final confirmed = await showConfirmationDialog(
       context: context,
@@ -246,13 +233,13 @@ class _DoctorSlotManagementScreenState
             slotsByDate[date]!.removeAt(index);
             if (slotsByDate[date]!.isEmpty) slotsByDate.remove(date);
           });
-          _showToast("Slot deleted", bg: Colors.green);
+          ToastUtil.success("Slot deleted");
         } else {
-          _showToast("Failed to delete slot");
+          ToastUtil.error("Failed to delete slot");
         }
       },
-      onApiError: (_) => _showToast("Failed to delete slot"),
-      onException: (e) => _showToast("Error: $e"),
+      onApiError: (_) => ToastUtil.error("Failed to delete slot"),
+      onException: (e) => ToastUtil.error("Error: $e"),
     );
   }
 
@@ -282,7 +269,7 @@ class _DoctorSlotManagementScreenState
     return RefreshIndicator(
       onRefresh: () async {
         await _loadSlots();
-        _showToast("Slots updated!", bg: Colors.green, position: "top");
+        ToastUtil.success("Slots updated!", gravity: ToastGravity.TOP);
       },
       child: Padding(
         padding: const EdgeInsets.all(16),

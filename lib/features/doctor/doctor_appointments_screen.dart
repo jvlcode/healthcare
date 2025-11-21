@@ -5,6 +5,7 @@ import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
@@ -59,14 +60,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
 
   Future<void> _refreshAppointments() async {
     await _loadAppointments();
-    Fluttertoast.showToast(
-      msg: "Appointments updated!",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.TOP,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
+    ToastUtil.success("Appointments updated!", gravity: ToastGravity.TOP);
   }
 
   Future<void> handleStatusUpdate(String id, String status) async {
@@ -78,27 +72,22 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           final index = bookings.indexWhere((b) => b.id == id);
           if (index != -1) bookings[index].status = status;
         });
-        if (status != 'STARTED') {
-          Fluttertoast.showToast(
-            msg: "Appointment has been ${status.toLowerCase()}",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.TOP,
-            backgroundColor: status == "REJECTED" ? Colors.red : Colors.green,
-            textColor: Colors.white,
-            fontSize: 16.0,
-          );
+        if (status == 'STARTED') {
+          ToastUtil.success("Call started!");
+        }
+        if (status == 'ACCEPTED') {
+          ToastUtil.success("You have accepted this appointment!");
+        }
+        if (status == 'COMPLETED') {
+          ToastUtil.success("This appointment has been completed!");
         }
       },
       onApiError: (res) {
         final map = res as Map<String, dynamic>?;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(map?['message'] ?? 'Update failed')),
-        );
+        ToastUtil.error(map?['message'] ?? 'Update failed');
       },
       onException: (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        ToastUtil.error(e.toString());
       },
     );
   }

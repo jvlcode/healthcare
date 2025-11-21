@@ -3,6 +3,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/user_service.dart';
@@ -81,14 +82,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           await SessionManager.updateUser(updatedUser);
 
           if (mounted) {
-            Fluttertoast.showToast(
-              msg: "Profile updated!",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.TOP,
-              backgroundColor: Colors.black,
-              textColor: Colors.white,
-              fontSize: 16.0,
-            );
+            ToastUtil.success("Profile updated!", gravity: ToastGravity.TOP);
             Navigator.pop(context);
           }
         },

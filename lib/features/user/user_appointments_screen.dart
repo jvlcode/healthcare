@@ -7,6 +7,7 @@ import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
@@ -71,13 +72,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
 
   Future<void> _refreshAppointments() async {
     await _loadAppointments();
-    Fluttertoast.showToast(
-      msg: "Appointments updated!",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.TOP,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-    );
+    ToastUtil.success("Appointments updated!");
   }
 
   Color _statusColor(String status) {

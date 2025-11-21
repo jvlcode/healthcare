@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/models/doctor_model.dart';
@@ -120,11 +122,11 @@ class _BookingScreenState extends State<BookingScreen> {
                       onPressed: () {
                         if (ageController.text.isEmpty ||
                             reasonController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Age & Reason are required"),
-                            ),
+                          ToastUtil.error(
+                            "Please fill required fields!",
+                            gravity: ToastGravity.CENTER,
                           );
+
                           return;
                         }
                         Navigator.pop(context, true);
@@ -153,8 +155,10 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _handleBooking(BuildContext context) async {
     final bool? canProceed = await _showExtraInfoForm();
-    if (canProceed != true) return;
 
+    if (canProceed != true) {
+      return;
+    }
     final appointmentService = AppointmentService();
 
     await NetworkHelper().safeCall(
