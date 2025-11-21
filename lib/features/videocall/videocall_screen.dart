@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
+import 'package:healthcare/services/videocall_service.dart';
 import 'package:provider/provider.dart';
 import 'package:healthcare/features/videocall/videocall_controller.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
@@ -8,6 +10,7 @@ class VideoCallScreen extends StatefulWidget {
   final String patientId;
   final String appointmentId;
   final bool isDoctor;
+  final String? videocallId;
 
   const VideoCallScreen({
     super.key,
@@ -15,6 +18,7 @@ class VideoCallScreen extends StatefulWidget {
     required this.patientId,
     required this.appointmentId,
     required this.isDoctor,
+    this.videocallId,
   });
 
   @override
@@ -23,7 +27,7 @@ class VideoCallScreen extends StatefulWidget {
 
 class _VideoCallScreenState extends State<VideoCallScreen> {
   late final VideoCallController _controller;
-
+  final service = VideoCallService();
   @override
   void initState() {
     super.initState();
@@ -33,6 +37,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       patientId: widget.patientId,
       channelName: "appointment_${widget.appointmentId}",
       isDoctor: widget.isDoctor,
+      videocallId: widget.videocallId,
     );
     _controller.startCall(
       onRemoteJoined: (uid) {
@@ -57,6 +62,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
   Future<bool> _onWillPop() async {
     await _controller.endCall();
+    ToastUtil.show("You have left the Videocall");
+    if (_controller.videocallId!.isNotEmpty) {
+      await service.endCall(callId: _controller.videocallId!);
+    }
+
     return true;
   }
 

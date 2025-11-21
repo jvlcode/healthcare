@@ -1,41 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/features/user/videocall_history/videoplayer_screen.dart';
+import 'package:healthcare/models/videocall_model.dart';
+import 'package:healthcare/services/videocall_service.dart';
 
-class VideoCallHistoryScreen extends StatelessWidget {
+class VideoCallHistoryScreen extends StatefulWidget {
   const VideoCallHistoryScreen({super.key});
 
-  final List<Map<String, String>> callHistory = const [
-    {
-      'doctorName': 'Dr. Priya Sha',
-      'specialty': 'Cardiologist',
-      'date': '10 Oct 2025',
-      'time': '10:00 AM',
-      'duration': '25 mins',
-      'status': 'Completed',
-      'videoUrl':
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-    {
-      'doctorName': 'Dr. Rajesh Nair',
-      'specialty': 'Dentist',
-      'date': '05 Oct 2025',
-      'time': '3:30 PM',
-      'duration': '15 mins',
-      'status': 'Completed',
-      'videoUrl':
-          'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-    },
-    {
-      'doctorName': 'Dr. Kavitha Rao',
-      'specialty': 'Neurologist',
-      'date': '28 Sep 2025',
-      'time': '11:00 AM',
-      'duration': 'Missed',
-      'status': 'Missed',
-      'videoUrl':
-          'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-    },
-  ];
+  @override
+  State<VideoCallHistoryScreen> createState() => _VideoCallHistoryScreenState();
+}
+
+class _VideoCallHistoryScreenState extends State<VideoCallHistoryScreen> {
+  List<VideoCall> historyList = [];
+  bool _loading = true;
+  String? _error;
+
+  final service = VideoCallService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await NetworkHelper().safeCall(
+        context,
+        () => service.getVideoCallHistory(),
+        onSuccess: (res) {
+          final data = res['data'] as List;
+          historyList = data.map((e) => VideoCall.fromJson(e)).toList();
+          ;
+        },
+        onApiError: (_) => _error = "Failed to load video call history",
+        onException: (e) => _error = e.toString(),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshHistory() async {
+    await _loadHistory();
+    ToastUtil.success("History updated");
+  }
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -68,214 +84,118 @@ class VideoCallHistoryScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_download, color: Colors.white),
-            onPressed: () {
-              // Backup all
-              for (var call in callHistory) {
-                backupVideo(call['doctorName']!);
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Backup started for all available videos"),
-                ),
-              );
-            },
-          ),
-        ],
       ),
-
-      // ---------------------- 7 DAYS WARNING BANNER ----------------------
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.yellow.shade100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info, color: Colors.orange),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Note: Our server stores your video temporarily for 7 days. "
-                    "Please backup important videos.",
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ---------------------- HISTORY LIST ----------------------
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: callHistory.length,
-              itemBuilder: (context, index) {
-                final call = callHistory[index];
-                final color = _statusColor(call['status']!);
-
-                // use StatefulBuilder to hold per-row state
-                return StatefulBuilder(
-                  builder: (context, setRowState) {
-                    bool isBackingUp = false;
-
-                    Future<void> startBackup() async {
-                      setRowState(() {
-                        isBackingUp = true;
-                      });
-
-                      await Future.delayed(
-                        const Duration(seconds: 2),
-                      ); // mock backup
-
-                      setRowState(() {
-                        isBackingUp = false;
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "${call['doctorName']} backup completed",
-                          ),
-                        ),
-                      );
-                    }
-
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => VideoPlayerScreen(
-                              videoUrl: call['videoUrl']!,
-                              doctorName: call['doctorName']!,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                'https://cdn-icons-png.flaticon.com/512/3774/3774299.png',
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Text(
+                _error!,
+                style: const TextStyle(fontSize: 18, color: Colors.red),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _refreshHistory,
+              child: historyList.isEmpty
+                  ? ListView(
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.7,
+                          child: const Center(
+                            child: Text(
+                              "No history found",
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey,
                               ),
-                              radius: 30,
                             ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: historyList.length,
+                      itemBuilder: (context, index) {
+                        final call = historyList[index];
+                        final color = _statusColor("completed");
 
-                            const SizedBox(width: 12),
-
-                            // -------- Prevent overflow by using Flexible --------
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    call['doctorName']!,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-
-                                  Text(
-                                    call['specialty']!,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  Row(
+                        return GestureDetector(
+                          onTap: () {
+                            if (call.videoUrl == null) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => VideoPlayerScreen(
+                                  videoUrl: call.videoUrl ?? "",
+                                  doctorName: call.doctorName,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // const CircleAvatar(
+                                //   backgroundImage: NetworkImage(
+                                //     'https://cdn-icons-png.flaticon.com/512/3774/3774299.png',
+                                //   ),
+                                //   radius: 30,
+                                // ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          call['date']!,
-                                          style: const TextStyle(fontSize: 13),
-                                          overflow: TextOverflow.ellipsis,
+                                      Text(
+                                        call.doctorName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      const Icon(
-                                        Icons.access_time,
-                                        size: 14,
-                                        color: Colors.grey,
+                                      Text(
+                                        call.specialty,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          call['time']!,
-                                          style: const TextStyle(fontSize: 13),
-                                          overflow: TextOverflow.ellipsis,
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        "${call.date} | ${call.time}",
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                      Text(
+                                        "Duration: ${call.duration}",
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black54,
                                         ),
                                       ),
                                     ],
                                   ),
-
-                                  const SizedBox(height: 6),
-
-                                  Text(
-                                    "Duration: ${call['duration']}",
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // -------- RIGHT SIDE ICONS (Cloud + Play) --------
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                isBackingUp
-                                    ? const SizedBox(
-                                        width: 26,
-                                        height: 26,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.2,
-                                        ),
-                                      )
-                                    : IconButton(
-                                        icon: const Icon(Icons.download),
-                                        color: Colors.blue,
-                                        onPressed: () => startBackup(),
-                                      ),
-
-                                const SizedBox(width: 4),
-
+                                ),
                                 Icon(
                                   Icons.play_circle_fill,
                                   color: color,
@@ -283,17 +203,11 @@ class VideoCallHistoryScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+                          ),
+                        );
+                      },
+                    ),
             ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
-import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
@@ -14,6 +13,7 @@ import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
+import 'package:healthcare/services/videocall_service.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
@@ -27,7 +27,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   bool _loading = true;
   String? _error;
 
-  final AppointmentService service = AppointmentService();
+  final AppointmentService appointmentService = AppointmentService();
 
   @override
   void initState() {
@@ -38,7 +38,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Future<void> _loadAppointments() async {
     await NetworkHelper().safeCall(
       context,
-      () => service.getUserAppointments(),
+      () => appointmentService.getUserAppointments(),
       onSuccess: (res) {
         setState(() {
           final data = res['data'] as List<dynamic>;
@@ -66,14 +66,17 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   Future<void> handleStatusUpdate(String id, String status) async {
     await NetworkHelper().safeCall(
       context,
-      () => service.updateAppointmentStatus(appointmentId: id, status: status),
+      () => appointmentService.updateAppointmentStatus(
+        appointmentId: id,
+        status: status,
+      ),
       onSuccess: (_) {
         setState(() {
           final index = bookings.indexWhere((b) => b.id == id);
           if (index != -1) bookings[index].status = status;
         });
         if (status == 'STARTED') {
-          ToastUtil.success("Call started!");
+          ToastUtil.info("Call started!");
         }
         if (status == 'ACCEPTED') {
           ToastUtil.success("You have accepted this appointment!");
@@ -87,7 +90,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         ToastUtil.error(map?['message'] ?? 'Update failed');
       },
       onException: (e) {
-        ToastUtil.error(e.toString());
+        setState(() {
+          _error = e.toString();
+        });
       },
     );
   }
@@ -170,6 +175,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             child: GFButton(
               onPressed: () async {
                 await handleStatusUpdate(booking.id, "STARTED");
+
                 if (!mounted) return;
                 Navigator.push(
                   context,
@@ -197,17 +203,19 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         children: [
           Expanded(
             child: GFButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VideoCallScreen(
-                    appointmentId: booking.id,
-                    doctorId: booking.doctor.id,
-                    patientId: booking.patient.id,
-                    isDoctor: true,
+              onPressed: () async {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoCallScreen(
+                      appointmentId: booking.id,
+                      doctorId: booking.doctor.id,
+                      patientId: booking.patient.id,
+                      isDoctor: true,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
               text: "Join Call",
               color: Colors.green,
               shape: GFButtonShape.pills,

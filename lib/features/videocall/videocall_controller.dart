@@ -11,6 +11,7 @@ class VideoCallController extends ChangeNotifier {
   final String patientId;
   final String channelName;
   final bool isDoctor;
+  final String? videocallId;
 
   VideoCallController({
     required this.appointmentId,
@@ -18,6 +19,7 @@ class VideoCallController extends ChangeNotifier {
     required this.patientId,
     required this.channelName,
     required this.isDoctor,
+    this.videocallId,
   });
 
   final AgoraService agora = AgoraService();

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
@@ -16,6 +15,7 @@ import 'package:healthcare/features/user/videocall_history_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
+import 'package:healthcare/services/videocall_service.dart';
 
 class UserAppointmentsScreen extends StatefulWidget {
   const UserAppointmentsScreen({super.key});
@@ -29,7 +29,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   bool _loading = true;
   String? _error;
   Timer? _autoRefreshTimer;
-
+  final VideoCallService videocallService = VideoCallService();
   @override
   void initState() {
     super.initState();
@@ -176,15 +176,36 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: GFButton(
-                                    onPressed: () => navigateSlideLeft(
-                                      context,
-                                      page: VideoCallScreen(
-                                        appointmentId: booking.id,
-                                        doctorId: booking.doctor.id,
-                                        patientId: booking.patient.id,
-                                        isDoctor: false,
-                                      ),
-                                    ),
+                                    onPressed: () async {
+                                      ToastUtil.info("Connecting...");
+                                      final res = await videocallService
+                                          .createVideocall(
+                                            doctorId: booking.doctor.id,
+                                            patientId: booking.patient.id,
+                                            appointmentId: booking.id,
+                                          );
+                                      final data = res['data'];
+                                      final callId = data?['_id'] as String?;
+
+                                      if (res['success'] == true &&
+                                          callId != null &&
+                                          callId.isNotEmpty) {
+                                        navigateSlideLeft(
+                                          context,
+                                          page: VideoCallScreen(
+                                            appointmentId: booking.id,
+                                            doctorId: booking.doctor.id,
+                                            patientId: booking.patient.id,
+                                            videocallId: callId,
+                                            isDoctor: false,
+                                          ),
+                                        );
+                                      } else {
+                                        ToastUtil.error(
+                                          "Failed to create call record",
+                                        );
+                                      }
+                                    },
                                     text: "Join Call",
                                     color: Colors.green,
                                     shape: GFButtonShape.pills,
