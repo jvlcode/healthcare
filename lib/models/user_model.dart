@@ -21,17 +21,25 @@ class User {
     this.doctor,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => User(
-    id: json['_id'],
-    name: json['name'],
-    email: json['email'],
-    phone: json['phone'] ?? "",
-    role: json['role'],
-    profileImage: json['profileImage'],
-    bio: json['bio'],
-    doctor: json['doctor'] != null ? Doctor.fromUserJson(json) : null,
-  );
-
+  factory User.fromJson(Map<String, dynamic> json) {
+    try {
+      return User(
+        id: json['_id'],
+        name: json['name'],
+        email: json['email'],
+        phone: json['phone'] ?? "",
+        role: json['role'],
+        profileImage: json['profileImage'],
+        bio: json['bio'],
+        doctor: json['doctor'] != null ? Doctor.fromUserJson(json) : null,
+      );
+    } catch (e, stack) {
+      print('❌ Failed to parse User: $e');
+      print('Stack: $stack');
+      print('Raw JSON: $json');
+      rethrow;
+    }
+  }
   Map<String, dynamic> toJson() => {
     '_id': id,
     'name': name,

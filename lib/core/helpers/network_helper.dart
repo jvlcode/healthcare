@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
@@ -45,8 +46,26 @@ class NetworkHelper {
         return null;
       }
 
-      final result = await apiCall();
+      T result = await apiCall();
+      print("RESULT");
+      print(result);
+      // Handle expired token (backend usually returns 401 or a specific flag)
+      if (result is Map<String, dynamic> &&
+          (result['success'] == false &&
+              result['message'] == 'TOKEN_EXPIRED')) {
+        final refreshed = await SessionManager.refreshAccessToken();
+        // Try refreshing token
+        if (refreshed) {
+          // Retry original call with new token
+          result = await apiCall();
+        }
+      }
 
+      if (result is Map<String, dynamic> &&
+          (result['success'] == false &&
+              result['message'] == 'TOKEN_EXPIRED')) {
+        result['message'] = "Session expired. Please login again.";
+      }
       if (result is Map<String, dynamic> && result['success'] == true) {
         if (onSuccess != null) onSuccess(result);
       } else {
@@ -69,7 +88,7 @@ class NetworkHelper {
       print('Stack trace: $stackTrace');
 
       if (onException != null) {
-        onException(e);
+        onException(e.toString());
       } else if (context.mounted) {
         ScaffoldMessenger.of(
           context,

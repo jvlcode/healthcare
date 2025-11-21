@@ -23,7 +23,7 @@ class AppointmentService {
     if (res['success'] == true && res['data'] is List) {
       return res;
     } else {
-      throw Exception(res['message'] ?? 'Failed to fetch appointments');
+      throw 'Failed to fetch appointments';
     }
   }
 

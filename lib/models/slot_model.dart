@@ -43,16 +43,23 @@ class Slot {
   }
 
   factory Slot.fromJson(Map<String, dynamic> json) {
-    return Slot(
-      id: json["_id"] ?? json["id"], // support both _id and id
-      date: DateTime.parse(json["date"]),
-      startTime: json["startTime"],
-      endTime: json["endTime"],
-      dateLabel: json["dateLabel"],
-      startTimeLabel: json["startTimeLabel"],
-      endTimeLabel: json["endTimeLabel"],
-      available: json["available"] ?? false,
-    );
+    try {
+      return Slot(
+        id: json["_id"] ?? json["id"], // support both _id and id
+        date: DateTime.parse(json["date"]),
+        startTime: json["startTime"],
+        endTime: json["endTime"],
+        dateLabel: json["dateLabel"],
+        startTimeLabel: json["startTimeLabel"],
+        endTimeLabel: json["endTimeLabel"],
+        available: json["available"] ?? false,
+      );
+    } catch (e, stack) {
+      print('❌ Failed to parse Slot: $e');
+      print('Stack: $stack');
+      print('Raw JSON: $json');
+      rethrow;
+    }
   }
   Slot copyWith({
     String? id,

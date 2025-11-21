@@ -42,7 +42,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         setState(() {
           final data = res['data'] as List<dynamic>;
           bookings = data.map((e) => Appointment.fromJson(e)).toList();
-          _loading = false;
         });
       },
       onApiError: (res) {
@@ -51,12 +50,11 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           SnackBar(content: Text(map?['message'] ?? 'Load failed')),
         );
       },
-      onException: (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
-      },
+      onException: (e) => _error = e.toString(),
     );
+    setState(() {
+      _loading = false;
+    });
   }
 
   Future<void> _refreshAppointments() async {

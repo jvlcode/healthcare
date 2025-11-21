@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/features/user/doctors/doctor_profile_screen.dart';
+import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
 import '../../../core/widgets/doctor_card.dart';
@@ -165,7 +166,14 @@ class _BookingScreenState extends State<BookingScreen> {
         reason: reasonController.text,
       ),
       onSuccess: (res) {
-        navigateSlideLeft(context, page: BookingSuccessScreen());
+        if (res['success'] == true) {
+          final appointmentJson = res['data'] as Map<String, dynamic>;
+          final booking = Appointment.fromJson(appointmentJson);
+          navigateSlideLeft(
+            context,
+            page: BookingSuccessScreen(booking: booking),
+          );
+        }
       },
       onApiError: (res) {
         final msg = res['message'] ?? 'Booking failed';

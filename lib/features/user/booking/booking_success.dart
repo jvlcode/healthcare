@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
-import 'package:healthcare/features/user/user_appointments_screen.dart';
+import 'package:healthcare/models/appointment_model.dart';
+import 'package:intl/intl.dart';
 
 class BookingSuccessScreen extends StatelessWidget {
-  const BookingSuccessScreen({super.key});
+  final Appointment booking;
+  const BookingSuccessScreen({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
+    // Format date and time
+    final dateString = booking.slot.dateLabel;
+    final timeString =
+        "${booking.slot.startTimeLabel} – ${booking.slot.endTimeLabel}";
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFBEFEF), // light pink background
+      backgroundColor: const Color(0xFFFBEFEF),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -17,7 +24,7 @@ class BookingSuccessScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ✅ Success Icon
+                /// Success Icon
                 Container(
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
@@ -28,7 +35,7 @@ class BookingSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // ✅ Success Message
+                /// Title
                 const Text(
                   'Your session is booked!',
                   style: TextStyle(
@@ -40,10 +47,10 @@ class BookingSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // ✅ Date and Time
-                const Text(
-                  'Wednesday, March 20\n9:00 AM – 10:00 AM\nwith Dr. Yuki Tanaka',
-                  style: TextStyle(
+                /// Dynamic Date + Time + Doctor
+                Text(
+                  "$dateString\n$timeString\nwith ${booking.doctor.name}",
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black87,
                     height: 1.5,
@@ -52,7 +59,7 @@ class BookingSuccessScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // ✅ Doctor Card
+                /// DOCTOR CARD
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -68,87 +75,76 @@ class BookingSuccessScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      // Doctor Avatar (placeholder)
+                      /// Doctor Image
                       Container(
                         width: 60,
                         height: 60,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFCCE6F4),
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          color: const Color(0xFFCCE6F4),
+                          image: booking.doctor.profileImage.isNotEmpty
+                              ? DecorationImage(
+                                  fit: BoxFit.cover,
+                                  image: NetworkImage(
+                                    booking.doctor.profileImage,
+                                  ),
+                                )
+                              : null,
                         ),
-                        child: const Icon(
-                          Icons.person,
-                          size: 40,
-                          color: Color(0xFF064273),
-                        ),
+                        child: booking.doctor.profileImage.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Color(0xFF064273),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 16),
 
-                      // Doctor Details
+                      /// Doctor Details
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Dr. Yuki Tanaka',
-                              style: TextStyle(
+                            Text(
+                              booking.doctor.name,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
-                            const Text(
-                              'Psychologist',
-                              style: TextStyle(
+                            Text(
+                              booking.doctor.specialization,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.black54,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
-                              children: const [
-                                Icon(
-                                  Icons.star,
-                                  color: Colors.orange,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  '4.8',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
+                            // Row(
+                            //   children: [
+                            //     const Icon(
+                            //       Icons.star,
+                            //       color: Colors.orange,
+                            //       size: 16,
+                            //     ),
+                            //     const SizedBox(width: 4),
+                            //     Text(
+                            //       booking.doctor.averageRating.toString(),
+                            //       style: const TextStyle(
+                            //         fontWeight: FontWeight.bold,
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
                             const SizedBox(height: 8),
-                            const Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: 'Specialties: ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextSpan(text: 'Anxiety, Stress\n'),
-                                  TextSpan(
-                                    text: 'Experience: ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextSpan(text: '10+ years\n'),
-                                  TextSpan(
-                                    text: 'Empowering ',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        'clients to achieve mental wellness through evidence-based therapy.',
-                                  ),
-                                ],
-                              ),
-                              style: TextStyle(
+
+                            /// Mini doctor bio
+                            Text(
+                              booking.doctor.bio.isNotEmpty
+                                  ? booking.doctor.bio
+                                  : "Doctor profile details available.",
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: Colors.black87,
                                 height: 1.4,
@@ -163,7 +159,7 @@ class BookingSuccessScreen extends StatelessWidget {
 
                 const SizedBox(height: 40),
 
-                // ✅ Done Button
+                /// DONE BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -176,6 +172,7 @@ class BookingSuccessScreen extends StatelessWidget {
                         textColor: Colors.white,
                         fontSize: 16.0,
                       );
+
                       navigateSlideLeft(
                         context,
                         routeName: "/user",

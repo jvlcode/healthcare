@@ -55,20 +55,27 @@ class Doctor {
 
   // For mapping doctor inside an appointment response
   factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
-    final doctorJson = json['doctor'] ?? {};
+    try {
+      final doctorJson = json['doctor'] ?? {};
 
-    return Doctor(
-      id: doctorJson["_id"] ?? "",
-      name: doctorJson["application"]?["personalInfo"]?["fullName"] ?? "",
-      specialization: doctorJson["specialization"] ?? "",
-      profileImage: doctorJson["user"]["profileImage"] ?? "",
-      averageRating: (doctorJson["averageRating"] ?? 0).toDouble(),
-      application: Application.fromJson(doctorJson["application"] ?? {}),
-      slots: [],
-      bio: doctorJson["bio"] ?? "",
-      recentReviews: [],
-      approved: doctorJson["approved"] ?? false,
-    );
+      return Doctor(
+        id: doctorJson["_id"] ?? "",
+        name: doctorJson["application"]?["personalInfo"]?["fullName"] ?? "",
+        specialization: doctorJson["specialization"] ?? "",
+        profileImage: doctorJson["user"]["profileImage"] ?? "",
+        averageRating: (doctorJson["averageRating"] ?? 0).toDouble(),
+        application: Application.fromJson(doctorJson["application"] ?? {}),
+        slots: [],
+        bio: doctorJson["bio"] ?? "",
+        recentReviews: [],
+        approved: doctorJson["approved"] ?? false,
+      );
+    } catch (e, stack) {
+      print('❌ Failed to parse Doctor: $e');
+      print('Stack: $stack');
+      print('Raw JSON: $json');
+      rethrow;
+    }
   }
 
   factory Doctor.fromUserJson(Map<String, dynamic> userJson) {
