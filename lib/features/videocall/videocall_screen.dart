@@ -63,8 +63,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Future<bool> _onWillPop() async {
     await _controller.endCall();
     ToastUtil.show("You have left the Videocall");
-    if (_controller.videocallId!.isNotEmpty) {
-      await service.endCall(callId: _controller.videocallId!);
+    final callId = _controller.videocallId;
+    if (callId != null && callId.isNotEmpty) {
+      await service.endCall(callId: callId);
     }
 
     return true;

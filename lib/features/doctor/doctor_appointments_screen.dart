@@ -174,6 +174,17 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           Expanded(
             child: GFButton(
               onPressed: () async {
+                final hasOngoing = bookings.any(
+                  (b) =>
+                      b.doctor.id == booking.doctor.id &&
+                      b.status.toLowerCase() == 'started' &&
+                      b.id != booking.id,
+                );
+                if (hasOngoing) {
+                  ToastUtil.error("You already have an ongoing call.");
+                  return;
+                }
+
                 await handleStatusUpdate(booking.id, "STARTED");
 
                 if (!mounted) return;
