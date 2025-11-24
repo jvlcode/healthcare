@@ -10,12 +10,12 @@ import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
-import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/user/videocall_history_screen.dart';
-import 'package:healthcare/features/videocall/incoming_videocall_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
+import 'package:healthcare/models/call_payload_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
+import 'package:healthcare/services/socket_service.dart';
 import 'package:healthcare/services/videocall_service.dart';
 
 class UserAppointmentsScreen extends StatefulWidget {
@@ -32,16 +32,57 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   Timer? _autoRefreshTimer;
   final VideoCallService videocallService = VideoCallService();
   bool _incomingScreenOpened = false;
+  final SocketService socketService = SocketService();
 
   @override
   void initState() {
     super.initState();
     _loadAppointments();
+    _initSocketListeners();
+  }
 
-    // Auto refresh every 10 seconds
-    _autoRefreshTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => _loadAppointments(),
+  Future<void> _initSocketListeners() async {
+    await SocketService().init(); // Make sure socket is connected
+
+    SocketService().onCallEvent.listen((event) {
+      final type = event["event"];
+      final data = event["data"];
+      print("📩 Socket event: $type");
+
+      switch (type) {
+        case SocketEvents.CALL_RINGING:
+          _handleIncomingCall(data);
+          break;
+      }
+    });
+  }
+
+  void _handleIncomingCall(dynamic payload) {
+    final call = CallPayload.fromJson(payload);
+
+    if (_incomingScreenOpened) return;
+    _incomingScreenOpened = true;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PopScope(
+          onPopInvokedWithResult: (didPop, result) {
+            _incomingScreenOpened = false;
+          },
+          child: VideoCallScreen(
+            appointmentId: call.appointmentId,
+            doctorId: call.callerId,
+            patientId: call.receiverId,
+            isDoctor: false,
+            isIncoming: true, // marks this as an incoming call
+            callerName: call.doctorName ?? "Caller",
+            onPopCallback: () {
+              _incomingScreenOpened = false;
+            },
+          ),
+        ),
+      ),
     );
   }
 
@@ -63,9 +104,16 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     required String doctorId,
     required String patientId,
   }) async {
-    if (Navigator.canPop(context)) Navigator.pop(context);
     _incomingScreenOpened = false;
+    final payload = CallPayload(
+      callerId: patientId,
+      receiverId: doctorId,
+      appointmentId: appointmentId,
+      roomId: "room_${appointmentId}", // optional for Agora/WebRTC
+      startTime: DateTime.now().toIso8601String(),
+    );
 
+    SocketService().emit(SocketEvents.CALL_ACCEPTED, payload.toJson());
     navigateSlideLeft(
       context,
       page: VideoCallScreen(
@@ -84,17 +132,19 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     required String doctorId,
     required String patientId,
   }) async {
-    // 1️⃣ Close UI immediately
-    if (Navigator.canPop(context)) Navigator.pop(context);
+    _incomingScreenOpened = false;
 
-    // 2️⃣ Process API in background
-    unawaited(
-      _postCallRejection(
-        appointmentId: appointmentId,
-        doctorId: doctorId,
-        patientId: patientId,
-      ),
+    final payload = CallPayload(
+      callerId: patientId,
+      receiverId: doctorId,
+      appointmentId: appointmentId,
+      roomId: "room_$appointmentId",
+      startTime: DateTime.now().toIso8601String(),
     );
+
+    SocketService().emit(SocketEvents.CALL_REJECTED, payload.toJson());
+
+    if (Navigator.canPop(context)) Navigator.pop(context);
   }
 
   Future<void> _postCallRejection({
@@ -103,11 +153,15 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     required String patientId,
   }) async {
     try {
-      // Update appointment status
-      await AppointmentService().updateAppointmentStatus(
+      final payload = CallPayload(
+        callerId: patientId,
+        receiverId: doctorId,
         appointmentId: appointmentId,
-        status: "CALL_REJECTED",
+        roomId: "room_${appointmentId}", // optional for Agora/WebRTC
+        startTime: DateTime.now().toIso8601String(),
       );
+
+      SocketService().emit(SocketEvents.CALL_REJECTED, payload.toJson());
 
       debugPrint("📌 CALL_REJECTED saved successfully.");
     } catch (e) {
@@ -128,53 +182,6 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
         onSuccess: (res) {
           final data = res['data'] as List;
           bookings = data.map((e) => Appointment.fromJson(e)).toList();
-          // ⬇️ ADD THIS HERE
-          if (mounted) {
-            for (final booking in bookings) {
-              final status = booking.status.toLowerCase();
-              // If doctor started the call and incoming screen isn't displayed
-              print("_incomingScreenOpened $_incomingScreenOpened");
-              if (status == "call_started" && !_incomingScreenOpened) {
-                _incomingScreenOpened = true;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PopScope(
-                      onPopInvokedWithResult: (didPop, result) {
-                        _incomingScreenOpened = false;
-                      },
-                      child: IncomingCallScreen(
-                        doctorId: booking.doctor.id,
-                        doctorName:
-                            booking.doctor.application.personalInfo.fullName,
-                        appointmentId: booking.id!,
-                        patientId: booking.patient.id,
-                        onAcceptCall: () {
-                          handleAccept(
-                            context,
-                            appointmentId: booking.id!,
-                            doctorId: booking.doctor.id,
-                            patientId: booking.patient.id,
-                          );
-                        },
-                        onRejectCall: () {
-                          handleReject(
-                            context,
-                            appointmentId: booking.id!,
-                            doctorId: booking.doctor.id,
-                            patientId: booking.patient.id,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-                break;
-              }
-
-              // Handle ongoing calls (user already inside session)
-            }
-          }
         },
         onApiError: (_) => _error = "Failed to load appointments",
         onException: (e) => _error = e.toString(),

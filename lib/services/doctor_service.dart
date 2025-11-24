@@ -18,18 +18,6 @@ class DoctorService {
     return await _apiClient.get("appointments", useAuth: true);
   }
 
-  /// 🔹 Update appointment status (Confirm / Cancel)
-  Future<Map<String, dynamic>> updateAppointmentStatus({
-    required String appointmentId,
-    required String status, // "CONFIRMED", "CANCELLED"
-  }) async {
-    return await _apiClient.patch(
-      "appointments/$appointmentId/status",
-      data: {"status": status},
-      useAuth: true,
-    );
-  }
-
   /// 🔹 Get doctor verification status
   Future<Map<String, dynamic>> getDoctorStatus(String userId) async {
     return await _apiClient.get("doctor/status/$userId", useAuth: true);

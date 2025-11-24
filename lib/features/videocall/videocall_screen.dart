@@ -1,16 +1,21 @@
 import 'dart:async';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
+import 'package:healthcare/models/call_payload_model.dart';
+import 'package:healthcare/services/socket_service.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/features/videocall/videocall_controller.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String doctorId;
+
   final String patientId;
   final String appointmentId;
   final bool isDoctor;
+  final String? callerName;
+  final bool isIncoming;
   final VoidCallback onPopCallback;
 
   const VideoCallScreen({
@@ -20,6 +25,8 @@ class VideoCallScreen extends StatefulWidget {
     required this.appointmentId,
     required this.isDoctor,
     required this.onPopCallback,
+    this.callerName,
+    this.isIncoming = false,
   });
 
   @override
@@ -32,16 +39,14 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Timer? _timeoutTimer;
 
   bool _remoteJoined = false;
+  bool _callAnswered = false;
   bool _isDisconnected = false;
   bool _isMissed = false;
+  bool _hasEnded = false;
 
-  // -------------------------
-  // LIFECYCLE
-  // -------------------------
   @override
   void initState() {
     super.initState();
-
     _controller = VideoCallController(
       appointmentId: widget.appointmentId,
       doctorId: widget.doctorId,
@@ -50,13 +55,13 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       isDoctor: widget.isDoctor,
     );
 
-    _controller.startCall(
-      onRemoteJoined: _onRemoteJoined,
-      onRemoteLeft: _onRemoteLeft,
-    );
+    if (widget.isIncoming && !widget.isDoctor) {
+      _startRingtone();
+    } else {
+      _startCall();
+    }
 
-    _startRingtone();
-    _startJoinTimeout();
+    _initSocketListeners();
   }
 
   @override
@@ -67,15 +72,44 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   }
 
   // -------------------------
-  // REMOTE EVENTS
+  // SOCKET EVENTS
   // -------------------------
+  Future<void> _initSocketListeners() async {
+    await SocketService().init();
+    final eventsMap = {
+      SocketEvents.CALL_REJECTED: "Call rejected by the other user",
+      SocketEvents.CALL_ENDED: "Call ended",
+      SocketEvents.CALL_DISCONNECTED: "Call disconnected",
+      SocketEvents.CALL_COMPLETED: "Call ended",
+      SocketEvents.CALL_FAILED: "Call failed",
+      SocketEvents.CALL_TIMEOUT: "Call timout",
+      SocketEvents.CALL_MISSED: "Call missed",
+    };
+
+    SocketService().onCallEvent.listen((event) {
+      final type = event["event"];
+      if (eventsMap.containsKey(type))
+        _handleEnd(type, eventsMap[type]!, isRemoteEvent: true);
+    });
+  }
+
+  // -------------------------
+  // CALL EVENTS
+  // -------------------------
+  void _startCall() {
+    _controller.startCall(
+      onRemoteJoined: _onRemoteJoined,
+      onRemoteLeft: _onRemoteLeft,
+    );
+    _startJoinTimeout();
+  }
+
   void _onRemoteJoined(int uid) {
     _stopRingtone();
     setState(() {
       _remoteJoined = true;
       _isDisconnected = false;
     });
-
     ToastUtil.success(widget.isDoctor ? "Patient joined!" : "Doctor joined!");
   }
 
@@ -84,19 +118,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       _remoteJoined = false;
       _isDisconnected = true;
     });
-
-    // Small grace time before closing
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted && !_remoteJoined) Navigator.maybePop(context);
+      if (!_remoteJoined)
+        _handleEnd("CALL_DISCONNECTED", "User dropped the call");
     });
   }
 
   // -------------------------
   // RINGTONE & TIMEOUT
   // -------------------------
-  void _startRingtone() async {
-    _audioPlayer = AudioPlayer()..setReleaseMode(ReleaseMode.loop);
-    await _audioPlayer!.play(AssetSource('sounds/ringtone.mp3'));
+  void _startRingtone() {
+    _audioPlayer ??= AudioPlayer()..setReleaseMode(ReleaseMode.loop);
+    _audioPlayer!.play(AssetSource('sounds/ringtone.mp3'));
   }
 
   void _stopRingtone() {
@@ -107,88 +140,91 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   void _startJoinTimeout() {
     _timeoutTimer = Timer(const Duration(seconds: 30), () {
       if (_remoteJoined) return;
-
-      _stopRingtone();
       _isMissed = true;
-      if (mounted) Navigator.maybePop(context);
+      _handleEnd("CALL_MISSED", "Call not answered");
     });
   }
 
   // -------------------------
-  // POP HANDLING
+  // END CALL LOGIC
   // -------------------------
-  Future<void> _handleEnd(String status, String message) async {
-    await _showDialog("Call Ended", message);
-    _controller.endCall(status);
+  Future<void> _handleEnd(
+    String status,
+    String message, {
+    bool isRemoteEvent = false,
+  }) async {
+    if (_hasEnded) return;
+    _hasEnded = true;
+
+    _stopRingtone();
+    // _controller.endCall(status);
+
+    // Only emit to server if this was a local action
+    if (!isRemoteEvent) {
+      SocketService().emit(
+        status,
+        CallPayload(
+          callerId: _controller.doctorId,
+          receiverId: _controller.patientId,
+          appointmentId: _controller.appointmentId,
+        ).toJson(),
+      );
+    }
+
     widget.onPopCallback();
-    if (mounted) Navigator.pop(context);
+    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
   }
+
+  void _answerCall() {
+    setState(() => _callAnswered = true);
+    _stopRingtone();
+    _startCall();
+  }
+
+  void _rejectCall() =>
+      _handleEnd(SocketEvents.CALL_REJECTED, "You rejected the call");
 
   Future<void> _onWillPop(didPop, result) async {
     if (didPop) return;
-
-    if (_isMissed) {
-      return _handleEnd("CALL_MISSED", "Call not answered.");
-    }
-
-    if (_isDisconnected) {
-      return _handleEnd("CALL_DISCONNECTED", "User dropped the call.");
-    }
+    if (_isMissed)
+      return _handleEnd(SocketEvents.CALL_MISSED, "Call not answered");
+    if (_isDisconnected)
+      return _handleEnd(
+        SocketEvents.CALL_DISCONNECTED,
+        "User dropped the call",
+      );
 
     final shouldEnd = await _confirmHangup();
-    if (shouldEnd == true) {
-      _stopRingtone();
-      _controller.endCall("CALL_DISCONNECTED");
-      widget.onPopCallback();
-      ToastUtil.show("Call Disconnected");
-      if (mounted) Navigator.pop(context);
-    }
+    if (shouldEnd == true)
+      _handleEnd(SocketEvents.CALL_DISCONNECTED, "Call Disconnected");
   }
 
-  // -------------------------
-  // DIALOG HELPERS
-  // -------------------------
-  Future<void> _showDialog(String title, String message) async {
-    return showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<bool?> _confirmHangup() {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("End Video Call"),
-        content: const Text("Are you sure you want to disconnect the call?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text("No"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text("Yes"),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<bool?> _confirmHangup() => showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("End Video Call"),
+      content: const Text("Are you sure you want to disconnect the call?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text("No"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text("Yes"),
+        ),
+      ],
+    ),
+  );
 
   // -------------------------
   // BUILD
   // -------------------------
   @override
   Widget build(BuildContext context) {
+    if (widget.isIncoming && !_callAnswered && !widget.isDoctor)
+      return _buildIncomingUI();
+
     return ChangeNotifierProvider.value(
       value: _controller,
       child: PopScope(
@@ -198,13 +234,75 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       ),
     );
   }
+
+  Widget _buildIncomingUI() {
+    return Scaffold(
+      backgroundColor: Colors.black87,
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.call, color: Colors.green, size: 70),
+            const SizedBox(height: 24),
+            Text(
+              widget.callerName ?? "Caller",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "is calling you...",
+              style: TextStyle(color: Colors.white70, fontSize: 18),
+            ),
+            const SizedBox(height: 60),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _incomingBtn(
+                  Icons.call_end,
+                  "Decline",
+                  Colors.red,
+                  _rejectCall,
+                ),
+                _incomingBtn(Icons.call, "Answer", Colors.green, _answerCall),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _incomingBtn(
+    IconData icon,
+    String text,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: CircleAvatar(
+            radius: 32,
+            backgroundColor: color,
+            child: Icon(icon, size: 28, color: Colors.white),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(text, style: const TextStyle(color: Colors.white)),
+      ],
+    );
+  }
 }
 
-// ============================================================================
-// UI VIEW (Unchanged Visuals)
-// ============================================================================
 class _VideoCallView extends StatelessWidget {
   final bool remoteJoined;
+
   const _VideoCallView({super.key, required this.remoteJoined});
 
   @override
@@ -230,9 +328,6 @@ class _VideoCallView extends StatelessWidget {
     );
   }
 
-  // ---------------------
-  // UI HELPERS
-  // ---------------------
   Widget _buildRemoteVideo(VideoCallController controller) {
     return Positioned.fill(
       child: remoteJoined && controller.remoteUid != null
@@ -288,30 +383,30 @@ class _VideoCallView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _controlBtn(
-            icon: controller.isMuted ? Icons.mic_off : Icons.mic,
-            onTap: controller.toggleMute,
+            controller.isMuted ? Icons.mic_off : Icons.mic,
+            controller.toggleMute,
           ),
           const SizedBox(width: 22),
           _controlBtn(
-            icon: Icons.call_end,
-            color: Colors.red,
-            onTap: () => Navigator.maybePop(context),
+            Icons.call_end,
+            () => Navigator.maybePop(context),
+            Colors.red,
           ),
           const SizedBox(width: 22),
           _controlBtn(
-            icon: controller.isCameraOff ? Icons.videocam_off : Icons.videocam,
-            onTap: controller.toggleCamera,
+            controller.isCameraOff ? Icons.videocam_off : Icons.videocam,
+            controller.toggleCamera,
           ),
         ],
       ),
     );
   }
 
-  Widget _controlBtn({
-    required IconData icon,
-    required VoidCallback onTap,
+  Widget _controlBtn(
+    IconData icon,
+    VoidCallback onTap, [
     Color color = Colors.white,
-  }) {
+  ]) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

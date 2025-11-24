@@ -12,7 +12,9 @@ import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
+import 'package:healthcare/models/call_payload_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
+import 'package:healthcare/services/socket_service.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
@@ -35,7 +37,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   }
 
   Future<void> _loadAppointments() async {
-    print("_loadAppointments CALLED");
     await NetworkHelper().safeCall(
       context,
       () => appointmentService.getUserAppointments(),
@@ -160,6 +161,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     if (status == "ACCEPTED" ||
         status == "CALL_REJECTED" ||
         status == "CALL_DISCONNECTED" ||
+        status == "CALL_ENDED" ||
         status == "CALL_MISSED") {
       return Row(
         children: [
@@ -188,6 +190,23 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   ToastUtil.error("You already have an ongoing call.");
                   return;
                 }
+
+                // 1️⃣ Prepare call payload
+                final payload = CallPayload(
+                  callerId: booking.doctor.id,
+                  receiverId: booking.patient.id,
+                  appointmentId: booking.id!,
+                  doctorName: booking.doctor.application.personalInfo.fullName,
+                  patientName: booking.patient.name,
+                  roomId: "room_${booking.id}", // optional for Agora/WebRTC
+                  startTime: DateTime.now().toIso8601String(),
+                );
+
+                // 2️⃣ Emit socket event
+                SocketService().emit(
+                  SocketEvents.CALL_STARTED,
+                  payload.toJson(),
+                );
 
                 // await handleStatusUpdate(booking.id, "STARTED");
 

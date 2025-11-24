@@ -47,8 +47,7 @@ class NetworkHelper {
       }
 
       T result = await apiCall();
-      print("RESULT");
-      print(result);
+      print("RESULT: $result");
       // Handle expired token (backend usually returns 401 or a specific flag)
       if (result is Map<String, dynamic> &&
           (result['success'] == false &&

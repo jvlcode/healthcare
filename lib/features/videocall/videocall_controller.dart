@@ -166,19 +166,6 @@ class VideoCallController extends ChangeNotifier {
     }
   }
 
-  Future<void> missedCall() async {
-    try {
-      if (videocallId.isNotEmpty) {
-        VideoCallService().updateCall(
-          callId: videocallId,
-          status: "CALL_MISSED",
-        );
-      }
-    } catch (e) {
-      debugPrint("Error ending call: $e");
-    }
-  }
-
   // ------------------------------
   // Dispose
   // ------------------------------
