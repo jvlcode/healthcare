@@ -4,6 +4,7 @@ import 'package:healthcare/features/videocall/agora_service.dart';
 import 'package:healthcare/services/videocall_service.dart';
 
 typedef RemoteJoinedCallback = void Function(int uid);
+typedef RemoteLeftCallback = void Function(int uid);
 
 class VideoCallController extends ChangeNotifier {
   final String appointmentId;
@@ -11,7 +12,6 @@ class VideoCallController extends ChangeNotifier {
   final String patientId;
   final String channelName;
   final bool isDoctor;
-  final String? videocallId;
 
   VideoCallController({
     required this.appointmentId,
@@ -19,11 +19,9 @@ class VideoCallController extends ChangeNotifier {
     required this.patientId,
     required this.channelName,
     required this.isDoctor,
-    this.videocallId,
   });
 
   final AgoraService agora = AgoraService();
-  final VideoCallService service = VideoCallService();
 
   bool _disposed = false;
   bool _initialized = false;
@@ -32,6 +30,7 @@ class VideoCallController extends ChangeNotifier {
   bool isReady = false;
   bool isMuted = false;
   bool isCameraOff = false;
+  String videocallId = "";
 
   String? _currentChannel;
   int? _currentUid;
@@ -46,7 +45,10 @@ class VideoCallController extends ChangeNotifier {
   // ------------------------------
   // Start Call
   // ------------------------------
-  Future<void> startCall({RemoteJoinedCallback? onRemoteJoined}) async {
+  Future<void> startCall({
+    RemoteJoinedCallback? onRemoteJoined,
+    RemoteLeftCallback? onRemoteLeft,
+  }) async {
     if (_disposed) return;
 
     try {
@@ -59,15 +61,19 @@ class VideoCallController extends ChangeNotifier {
         isReady = false;
       });
 
-      final res = await service.fetchAgoraToken(channel: channelName, uid: uid);
+      // 1️⃣ Fetch Agora Token (quick)
+      final res = await VideoCallService().fetchAgoraToken(
+        channel: channelName,
+        uid: uid,
+      );
       final token = res['data']['token'];
 
+      // 2️⃣ Initialize only once
       if (!_initialized) {
         await agora.initialize(
           onUserJoined: (remote) {
             if (_disposed) return;
 
-            // Register remote video
             agora.engine.setupRemoteVideo(
               VideoCanvas(
                 uid: remote,
@@ -81,22 +87,52 @@ class VideoCallController extends ChangeNotifier {
           onUserLeft: (remote) {
             if (_disposed) return;
             _safeUpdate(() => remoteUid = null);
+            onRemoteLeft?.call(remote);
           },
         );
         _initialized = true;
       }
 
-      // IMPORTANT STEPS
+      // 3️⃣ Enable camera and start preview
       await agora.engine.enableVideo();
       await agora.engine.enableLocalVideo(true);
       await agora.engine.startPreview();
 
+      // 4️⃣ Join Agora instantly (no waiting for API)
       await agora.joinChannel(token: token, channel: channelName, uid: uid);
 
       _safeUpdate(() => isReady = true);
+
+      // 5️⃣ Run backend updates in background
+      _sendCallAcceptanceAsync();
     } catch (e, st) {
       debugPrint("Error starting call: $e");
       debugPrintStack(stackTrace: st);
+    }
+  }
+
+  Future<void> _sendCallAcceptanceAsync() async {
+    try {
+      // Create video call entry if not already available
+      if (videocallId.isEmpty) {
+        final res = await VideoCallService().createVideocall(
+          doctorId: doctorId,
+          patientId: patientId,
+          appointmentId: appointmentId,
+        );
+
+        final data = res['data'];
+        final callId = data?['_id'] as String?;
+
+        if (res['success'] == true && callId != null) {
+          videocallId = callId;
+          debugPrint("📌 Video call record saved: $callId");
+        } else {
+          debugPrint("❌ Failed to store video call record");
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ Background call update failed: $e");
     }
   }
 
@@ -120,21 +156,24 @@ class VideoCallController extends ChangeNotifier {
   // ------------------------------
   // End Call
   // ------------------------------
-  Future<void> endCall() async {
-    if (_disposed) return;
-
+  void endCall(String status) {
     try {
-      if (_initialized) {
-        await agora.engine.leaveChannel();
-        await agora.engine.stopPreview();
+      if (videocallId.isNotEmpty) {
+        VideoCallService().updateCall(callId: videocallId, status: status);
       }
+    } catch (e) {
+      debugPrint("Error ending call: $e");
+    }
+  }
 
-      _safeUpdate(() {
-        remoteUid = null;
-        isReady = false;
-        _currentChannel = null;
-        _currentUid = null;
-      });
+  Future<void> missedCall() async {
+    try {
+      if (videocallId.isNotEmpty) {
+        VideoCallService().updateCall(
+          callId: videocallId,
+          status: "CALL_MISSED",
+        );
+      }
     } catch (e) {
       debugPrint("Error ending call: $e");
     }
@@ -147,8 +186,11 @@ class VideoCallController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
 
+    // Safety net: leave channel if still connected
     if (_initialized) {
-      agora.engine.release(); // Must destroy engine!
+      agora.engine.leaveChannel(); // fire-and-forget
+      agora.engine.stopPreview();
+      agora.engine.release();
     }
 
     super.dispose();

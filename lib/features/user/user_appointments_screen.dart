@@ -12,6 +12,7 @@ import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
 import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/user/videocall_history_screen.dart';
+import 'package:healthcare/features/videocall/incoming_videocall_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
@@ -30,6 +31,8 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   String? _error;
   Timer? _autoRefreshTimer;
   final VideoCallService videocallService = VideoCallService();
+  bool _incomingScreenOpened = false;
+
   @override
   void initState() {
     super.initState();
@@ -43,9 +46,73 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _incomingScreenOpened = false;
+  }
+
+  @override
   void dispose() {
     _autoRefreshTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> handleAccept(
+    BuildContext context, {
+    required String appointmentId,
+    required String doctorId,
+    required String patientId,
+  }) async {
+    if (Navigator.canPop(context)) Navigator.pop(context);
+    _incomingScreenOpened = false;
+
+    navigateSlideLeft(
+      context,
+      page: VideoCallScreen(
+        appointmentId: appointmentId,
+        doctorId: doctorId,
+        patientId: patientId,
+        isDoctor: false,
+        onPopCallback: () {},
+      ),
+    );
+  }
+
+  Future<void> handleReject(
+    BuildContext context, {
+    required String appointmentId,
+    required String doctorId,
+    required String patientId,
+  }) async {
+    // 1️⃣ Close UI immediately
+    if (Navigator.canPop(context)) Navigator.pop(context);
+
+    // 2️⃣ Process API in background
+    unawaited(
+      _postCallRejection(
+        appointmentId: appointmentId,
+        doctorId: doctorId,
+        patientId: patientId,
+      ),
+    );
+  }
+
+  Future<void> _postCallRejection({
+    required String appointmentId,
+    required String doctorId,
+    required String patientId,
+  }) async {
+    try {
+      // Update appointment status
+      await AppointmentService().updateAppointmentStatus(
+        appointmentId: appointmentId,
+        status: "CALL_REJECTED",
+      );
+
+      debugPrint("📌 CALL_REJECTED saved successfully.");
+    } catch (e) {
+      debugPrint("❌ Error saving CALL_REJECTED: $e");
+    }
   }
 
   Future<void> _loadAppointments() async {
@@ -61,6 +128,53 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
         onSuccess: (res) {
           final data = res['data'] as List;
           bookings = data.map((e) => Appointment.fromJson(e)).toList();
+          // ⬇️ ADD THIS HERE
+          if (mounted) {
+            for (final booking in bookings) {
+              final status = booking.status.toLowerCase();
+              // If doctor started the call and incoming screen isn't displayed
+              print("_incomingScreenOpened $_incomingScreenOpened");
+              if (status == "call_started" && !_incomingScreenOpened) {
+                _incomingScreenOpened = true;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PopScope(
+                      onPopInvokedWithResult: (didPop, result) {
+                        _incomingScreenOpened = false;
+                      },
+                      child: IncomingCallScreen(
+                        doctorId: booking.doctor.id,
+                        doctorName:
+                            booking.doctor.application.personalInfo.fullName,
+                        appointmentId: booking.id!,
+                        patientId: booking.patient.id,
+                        onAcceptCall: () {
+                          handleAccept(
+                            context,
+                            appointmentId: booking.id!,
+                            doctorId: booking.doctor.id,
+                            patientId: booking.patient.id,
+                          );
+                        },
+                        onRejectCall: () {
+                          handleReject(
+                            context,
+                            appointmentId: booking.id!,
+                            doctorId: booking.doctor.id,
+                            patientId: booking.patient.id,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+                break;
+              }
+
+              // Handle ongoing calls (user already inside session)
+            }
+          }
         },
         onApiError: (_) => _error = "Failed to load appointments",
         onException: (e) => _error = e.toString(),
@@ -77,11 +191,11 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'confirmed':
+      case 'accepted':
         return Colors.green;
       case 'pending':
         return Colors.orange;
-      case 'cancelled':
+      case 'rejected':
         return Colors.red;
       default:
         return Colors.grey;
@@ -96,6 +210,66 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
       onRetry: _loadAppointments,
       child: _buildUI(),
     );
+  }
+
+  String statusText(String status) {
+    switch (status.toUpperCase()) {
+      case 'CALL_STARTED':
+        return "Ringing...";
+      case 'CALL_ACCEPTED':
+      case 'ONGOING':
+        return "Call in progress";
+      case 'CALL_REJECTED':
+        return "You rejected the call";
+      case 'CALL_MISSED':
+        return "You missed the call";
+      case 'CALL_DISCONNECTED':
+        return "Call disconnected";
+      case 'COMPLETED':
+        return "Completed";
+      default:
+        return status;
+    }
+  }
+
+  Widget _renderActions(Appointment booking) {
+    final status = booking.status.toUpperCase();
+
+    switch (status) {
+      case 'ONGOING':
+      case 'CALL_ACCEPTED':
+        return Row(
+          children: [
+            Expanded(
+              child: GFButton(
+                onPressed: () {
+                  navigateSlideLeft(
+                    context,
+                    page: VideoCallScreen(
+                      appointmentId: booking.id!,
+                      doctorId: booking.doctor.id,
+                      patientId: booking.patient.id,
+                      isDoctor: false,
+                      onPopCallback: () {},
+                    ),
+                  );
+                },
+                text: "Join Call",
+                color: Colors.green,
+                shape: GFButtonShape.pills,
+              ),
+            ),
+          ],
+        );
+
+      // These show no buttons
+      case 'PENDING':
+      case 'CALL_REJECTED':
+      case 'CALL_MISSED':
+      case 'COMPLETED':
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildUI() {
@@ -152,68 +326,12 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
                       ),
                       title: booking.doctor.application.personalInfo.fullName,
                       subtitle: booking.doctor.specialization,
-                      status: booking.status,
+                      status: statusText(booking.status),
                       statusColor: statusColor,
                       date: booking.slot.dateLabel,
                       timeRange:
                           "${booking.slot.startTimeLabel} - ${booking.slot.endTimeLabel}",
-                      actionButtons: booking.status.toLowerCase() == 'started'
-                          ? Row(
-                              children: [
-                                Expanded(
-                                  child: GFButton(
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ChatScreen(),
-                                      ),
-                                    ),
-                                    text: "Chat",
-                                    color: const Color(0xFFFF6B35),
-                                    shape: GFButtonShape.pills,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: GFButton(
-                                    onPressed: () async {
-                                      ToastUtil.info("Connecting...");
-                                      final res = await videocallService
-                                          .createVideocall(
-                                            doctorId: booking.doctor.id,
-                                            patientId: booking.patient.id,
-                                            appointmentId: booking.id,
-                                          );
-                                      final data = res['data'];
-                                      final callId = data?['_id'] as String?;
-
-                                      if (res['success'] == true &&
-                                          callId != null &&
-                                          callId.isNotEmpty) {
-                                        navigateSlideLeft(
-                                          context,
-                                          page: VideoCallScreen(
-                                            appointmentId: booking.id,
-                                            doctorId: booking.doctor.id,
-                                            patientId: booking.patient.id,
-                                            videocallId: callId,
-                                            isDoctor: false,
-                                          ),
-                                        );
-                                      } else {
-                                        ToastUtil.error(
-                                          "Failed to create call record",
-                                        );
-                                      }
-                                    },
-                                    text: "Join Call",
-                                    color: Colors.green,
-                                    shape: GFButtonShape.pills,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
+                      actionButtons: _renderActions(booking),
                     );
                   }),
                 ],

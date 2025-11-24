@@ -13,7 +13,6 @@ import 'package:healthcare/features/user/doctors/chat_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
-import 'package:healthcare/services/videocall_service.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
@@ -36,6 +35,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   }
 
   Future<void> _loadAppointments() async {
+    print("_loadAppointments CALLED");
     await NetworkHelper().safeCall(
       context,
       () => appointmentService.getUserAppointments(),
@@ -75,7 +75,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           final index = bookings.indexWhere((b) => b.id == id);
           if (index != -1) bookings[index].status = status;
         });
-        if (status == 'STARTED') {
+        if (status == 'CALL_STARTED') {
           ToastUtil.info("Call started!");
         }
         if (status == 'ACCEPTED') {
@@ -119,6 +119,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
 
     if (status == "ACCEPTED" && isExpired) return const SizedBox.shrink();
 
+    // Pending: Accept / Reject buttons
     if (status == "PENDING") {
       return Row(
         children: [
@@ -142,7 +143,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   cancelText: "No",
                   confirmColor: Colors.red,
                 );
-
                 if (confirmed) {
                   handleStatusUpdate(booking.id, "REJECTED");
                 }
@@ -156,7 +156,11 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
     }
 
-    if (status == "ACCEPTED") {
+    // Accepted / Call rejected / Call disconnected: show chat + video call buttons
+    if (status == "ACCEPTED" ||
+        status == "CALL_REJECTED" ||
+        status == "CALL_DISCONNECTED" ||
+        status == "CALL_MISSED") {
       return Row(
         children: [
           Expanded(
@@ -177,7 +181,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 final hasOngoing = bookings.any(
                   (b) =>
                       b.doctor.id == booking.doctor.id &&
-                      b.status.toLowerCase() == 'started' &&
+                      b.status.toLowerCase() == 'call_started' &&
                       b.id != booking.id,
                 );
                 if (hasOngoing) {
@@ -185,9 +189,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   return;
                 }
 
-                await handleStatusUpdate(booking.id, "STARTED");
+                // await handleStatusUpdate(booking.id, "STARTED");
 
                 if (!mounted) return;
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -196,11 +201,13 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                       doctorId: booking.doctor.id,
                       patientId: booking.patient.id,
                       isDoctor: true,
+                      onPopCallback: _loadAppointments,
                     ),
                   ),
                 );
               },
-              text: "Start Call",
+              text: "Video Call",
+              icon: const Icon(Icons.videocam, color: Colors.white),
               color: Colors.blue,
               shape: GFButtonShape.pills,
             ),
@@ -209,30 +216,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
     }
 
-    if (status == "STARTED") {
+    // Started: Join / Complete
+    if (status == "CALL_STARTED" || status == "CALL_ACCEPTED") {
       return Row(
         children: [
-          Expanded(
-            child: GFButton(
-              onPressed: () async {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VideoCallScreen(
-                      appointmentId: booking.id,
-                      doctorId: booking.doctor.id,
-                      patientId: booking.patient.id,
-                      isDoctor: true,
-                    ),
-                  ),
-                );
-              },
-              text: "Join Call",
-              color: Colors.green,
-              shape: GFButtonShape.pills,
-            ),
-          ),
-          const SizedBox(width: 10),
           Expanded(
             child: GFButton(
               onPressed: () async {
@@ -262,6 +249,28 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
               shape: GFButtonShape.pills,
             ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GFButton(
+              onPressed: () async {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoCallScreen(
+                      appointmentId: booking.id,
+                      doctorId: booking.doctor.id,
+                      patientId: booking.patient.id,
+                      isDoctor: true,
+                      onPopCallback: _loadAppointments,
+                    ),
+                  ),
+                );
+              },
+              text: "Join Call",
+              color: Colors.green,
+              shape: GFButtonShape.pills,
+            ),
+          ),
         ],
       );
     }
@@ -287,6 +296,23 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       );
     }
 
+    String statusText(status) {
+      switch (status) {
+        case 'CALL_ACCEPTED':
+          return "Call in progress";
+        case 'CALL_REJECTED':
+          return "Patient rejected the call";
+        case 'CALL_MISSED':
+          return "Patient missed the call";
+        case 'CALL_CANCELLED':
+          return "Doctor cancelled the call";
+        case 'CALL_DISCONNECTED':
+          return "Call disconnected";
+        default:
+          return "Waiting for response...";
+      }
+    }
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -301,7 +327,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           final status = b.status.toUpperCase();
           final displayStatus = (isExpired && status != "COMPLETED")
               ? "EXPIRED"
-              : status;
+              : statusText(status);
 
           return AppointmentCard(
             avatar: CircleAvatar(

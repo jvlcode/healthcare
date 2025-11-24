@@ -62,7 +62,7 @@ class Doctor {
         id: doctorJson["_id"] ?? "",
         name: doctorJson["application"]?["personalInfo"]?["fullName"] ?? "",
         specialization: doctorJson["specialization"] ?? "",
-        profileImage: doctorJson["user"]["profileImage"] ?? "",
+        profileImage: doctorJson["user"]?["profileImage"] ?? "",
         averageRating: (doctorJson["averageRating"] ?? 0).toDouble(),
         application: Application.fromJson(doctorJson["application"] ?? {}),
         slots: [],

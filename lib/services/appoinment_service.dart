@@ -23,8 +23,13 @@ class AppointmentService {
     if (res['success'] == true && res['data'] is List) {
       return res;
     } else {
+      print(res);
       throw 'Failed to fetch appointments';
     }
+  }
+
+  Future<Map<String, dynamic>> getUserAppointment(String appointmentId) async {
+    return await _apiClient.get("appointments/$appointmentId", useAuth: true);
   }
 
   Future<Map<String, dynamic>> updateAppointmentStatus({

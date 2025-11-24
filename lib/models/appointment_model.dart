@@ -5,7 +5,6 @@ import 'package:healthcare/models/user_model.dart';
 class Appointment {
   final String id;
   String status;
-  final int amount;
   final DateTime createdAt;
   final Doctor doctor;
   final Slot slot;
@@ -16,7 +15,6 @@ class Appointment {
   Appointment({
     required this.id,
     required this.status,
-    required this.amount,
     required this.createdAt,
     required this.doctor,
     required this.slot,
@@ -29,8 +27,7 @@ class Appointment {
     try {
       return Appointment(
         id: json['_id'],
-        status: json['status'],
-        amount: json['amount'],
+        status: json['status'] ?? "Unknown",
         age: json['age'] ?? "Unknown",
         reason: json['reason'] ?? "Unknown",
         createdAt: DateTime.parse(json['createdAt']),
