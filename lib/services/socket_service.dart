@@ -5,6 +5,7 @@ import 'package:healthcare/core/constants/urls.dart';
 
 class SocketEvents {
   static const CHAT_MESSAGE = "chat:message";
+  static const CHAT_DELIVERED = "chat:delivered";
 
   static const CALL_STARTED = "call:started";
   static const CALL_RINGING = "call:ringing";
@@ -26,6 +27,8 @@ class SocketService {
   IO.Socket? _socket;
   bool _connected = false;
   bool get isConnected => _connected;
+  // Add this line 👇
+  IO.Socket? get socket => _socket;
 
   /// Singleton
   static final SocketService _instance = SocketService._internal();
@@ -91,6 +94,7 @@ class SocketService {
   /// Private: Register all incoming event listeners
   void _registerCoreEvents() {
     final callEvents = [
+      SocketEvents.CHAT_MESSAGE,
       SocketEvents.CALL_STARTED,
       SocketEvents.CALL_RINGING,
       SocketEvents.CALL_IN_PROGRESS,

@@ -1,32 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/services/socket_service.dart'; // make sure path is correct
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String toId;
+  final String displayName;
+  const ChatScreen({super.key, required this.toId, required this.displayName});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<Map<String, dynamic>> _messages = [
-    {"isUser": false, "text": "Hello! How can I help you today?"},
-    {"isUser": true, "text": "Hi, I’ve been feeling stressed lately."},
-    {
-      "isUser": false,
-      "text":
-          "I’m sorry to hear that. Would you like to talk about what’s been on your mind?",
-    },
-    {"isUser": true, "text": "Yes, I keep worrying about work."},
-  ];
-
+  final List<Map<String, dynamic>> _messages = [];
   final TextEditingController _controller = TextEditingController();
+
+  final socket = SocketService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initSocketListeners();
+  }
+
+  Future<void> _initSocketListeners() async {
+    await socket.init();
+
+    socket.onCallEvent.listen((event) {
+      final type = event["event"];
+      final data = event["data"];
+
+      if (type == SocketEvents.CHAT_MESSAGE) {
+        _handleMessages(data);
+      }
+    });
+  }
+
+  void _handleMessages(data) {
+    if (!mounted) return;
+
+    setState(() {
+      _messages.add({"isUser": false, "text": data["text"]});
+    });
+  }
 
   void _sendMessage() {
     if (_controller.text.trim().isEmpty) return;
 
+    String text = _controller.text.trim();
+
+    // Push to UI immediately
     setState(() {
-      _messages.add({"isUser": true, "text": _controller.text.trim()});
+      _messages.add({"isUser": true, "text": text});
     });
+
+    // Emit to server
+    socket.emit(SocketEvents.CHAT_MESSAGE, {
+      "text": text,
+      "to": widget.toId,
+      "timestamp": DateTime.now().toIso8601String(),
+      // Add user / appointment / receiverId as needed
+    });
+
     _controller.clear();
   }
 
@@ -43,14 +77,14 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         title: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
               backgroundColor: Colors.orange,
               child: Icon(Icons.person, color: Colors.white),
             ),
-            const SizedBox(width: 10),
-            const Text(
-              "Jennifer Kay",
+            SizedBox(width: 10),
+            Text(
+              widget.displayName,
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
@@ -62,7 +96,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Chat messages list
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -97,7 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          // Input field + Submit button
+          // Input area
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(

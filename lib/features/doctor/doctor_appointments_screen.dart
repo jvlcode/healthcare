@@ -9,7 +9,7 @@ import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/confirmation_dialog.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
-import 'package:healthcare/features/user/doctors/chat_screen.dart';
+import 'package:healthcare/features/chat/chat_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/models/call_payload_model.dart';
@@ -204,17 +204,37 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 color: const Color(0xFFFF6B35),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ChatScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      toId: a.patient.id,
+                      displayName: a.patient.name,
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 5),
             Expanded(
               child: actionBtn(
-                label: "Video Call",
+                label: "Call",
                 color: Colors.blue,
                 icon: const Icon(Icons.videocam, color: Colors.white),
                 onTap: () => startCall(a),
+              ),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: actionBtn(
+                label: "Complete",
+                color: Colors.green,
+                onTap: () async {
+                  if (await confirmAction(
+                    "Complete",
+                    "Finish this appointment?",
+                  )) {
+                    updateStatus(a.id!, "COMPLETED");
+                  }
+                },
               ),
             ),
           ],

@@ -9,6 +9,7 @@ import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/appointment_card.dart';
 import 'package:healthcare/core/widgets/network_aware_scaffold.dart';
 import 'package:healthcare/core/widgets/safe_avatar.dart';
+import 'package:healthcare/features/chat/chat_screen.dart';
 import 'package:healthcare/features/user/videocall_history_screen.dart';
 import 'package:healthcare/features/videocall/videocall_screen.dart';
 import 'package:healthcare/models/appointment_model.dart';
@@ -147,20 +148,19 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   // ---------------------------------------
   Widget _renderActions(Appointment booking) {
     final status = booking.status.toUpperCase();
+    const notAllowedStatuses = ['PENDING', 'COMPLETED', 'REJECTED'];
 
-    if (status == 'ONGOING' || status == 'CALL_ACCEPTED') {
+    if (!notAllowedStatuses.contains(status)) {
       return GFButton(
         onPressed: () => navigateSlideLeft(
           context,
-          page: VideoCallScreen(
-            appointmentId: booking.id!,
-            doctorId: booking.doctor.id,
-            patientId: booking.patient.id,
-            isDoctor: false,
+          page: ChatScreen(
+            toId: booking.doctor.id,
+            displayName: booking.doctor.name,
           ),
         ),
-        text: "Join Call",
-        color: Colors.green,
+        text: "Chat",
+        color: const Color(0xFFFF6B35),
         shape: GFButtonShape.pills,
       );
     }
