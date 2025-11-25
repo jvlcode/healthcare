@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:getwidget/components/button/gf_button.dart';
 import 'package:getwidget/shape/gf_button_shape.dart';
@@ -16,7 +15,6 @@ import 'package:healthcare/models/appointment_model.dart';
 import 'package:healthcare/models/call_payload_model.dart';
 import 'package:healthcare/services/appoinment_service.dart';
 import 'package:healthcare/services/socket_service.dart';
-import 'package:healthcare/services/videocall_service.dart';
 
 class UserAppointmentsScreen extends StatefulWidget {
   const UserAppointmentsScreen({super.key});
@@ -29,10 +27,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   List<Appointment> bookings = [];
   bool _loading = true;
   String? _error;
-  Timer? _autoRefreshTimer;
-  final VideoCallService videocallService = VideoCallService();
-  bool _incomingScreenOpened = false;
-  final SocketService socketService = SocketService();
+  final socket = SocketService();
 
   @override
   void initState() {
@@ -42,138 +37,49 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   }
 
   Future<void> _initSocketListeners() async {
-    await SocketService().init(); // Make sure socket is connected
+    await socket.init();
 
-    SocketService().onCallEvent.listen((event) {
+    socket.onCallEvent.listen((event) {
       final type = event["event"];
       final data = event["data"];
-      print("📩 Socket event: $type");
 
-      switch (type) {
-        case SocketEvents.CALL_RINGING:
-          _handleIncomingCall(data);
-          break;
+      if (type == SocketEvents.CALL_RINGING) {
+        _handleIncomingCall(CallPayload.fromJson(data));
       }
     });
   }
 
-  void _handleIncomingCall(dynamic payload) {
-    final call = CallPayload.fromJson(payload);
+  bool _isAppointmentExpired(Appointment booking) {
+    return DateTime.now().isAfter(booking.slot.startDateTime);
+  }
 
-    if (_incomingScreenOpened) return;
-    _incomingScreenOpened = true;
-
-    Navigator.push(
+  // ---------------------------------------
+  // Incoming Call Handler
+  // ---------------------------------------
+  void _handleIncomingCall(CallPayload call) {
+    navigateSlideLeft(
       context,
-      MaterialPageRoute(
-        builder: (_) => PopScope(
-          onPopInvokedWithResult: (didPop, result) {
-            _incomingScreenOpened = false;
-          },
-          child: VideoCallScreen(
-            appointmentId: call.appointmentId,
-            doctorId: call.callerId,
-            patientId: call.receiverId,
-            isDoctor: false,
-            isIncoming: true, // marks this as an incoming call
-            callerName: call.doctorName ?? "Caller",
-            onPopCallback: () {
-              _incomingScreenOpened = false;
-            },
-          ),
+      page: PopScope(
+        onPopInvokedWithResult: (didPop, result) {
+          _refreshAppointments();
+        },
+        child: VideoCallScreen(
+          appointmentId: call.appointmentId,
+          doctorId: call.callerId,
+          patientId: call.receiverId,
+          isDoctor: false,
+          isIncoming: true,
+          callerName: call.doctorName ?? "Caller",
         ),
       ),
     );
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _incomingScreenOpened = false;
-  }
-
-  @override
-  void dispose() {
-    _autoRefreshTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> handleAccept(
-    BuildContext context, {
-    required String appointmentId,
-    required String doctorId,
-    required String patientId,
-  }) async {
-    _incomingScreenOpened = false;
-    final payload = CallPayload(
-      callerId: patientId,
-      receiverId: doctorId,
-      appointmentId: appointmentId,
-      roomId: "room_${appointmentId}", // optional for Agora/WebRTC
-      startTime: DateTime.now().toIso8601String(),
-    );
-
-    SocketService().emit(SocketEvents.CALL_ACCEPTED, payload.toJson());
-    navigateSlideLeft(
-      context,
-      page: VideoCallScreen(
-        appointmentId: appointmentId,
-        doctorId: doctorId,
-        patientId: patientId,
-        isDoctor: false,
-        onPopCallback: () {},
-      ),
-    );
-  }
-
-  Future<void> handleReject(
-    BuildContext context, {
-    required String appointmentId,
-    required String doctorId,
-    required String patientId,
-  }) async {
-    _incomingScreenOpened = false;
-
-    final payload = CallPayload(
-      callerId: patientId,
-      receiverId: doctorId,
-      appointmentId: appointmentId,
-      roomId: "room_$appointmentId",
-      startTime: DateTime.now().toIso8601String(),
-    );
-
-    SocketService().emit(SocketEvents.CALL_REJECTED, payload.toJson());
-
-    if (Navigator.canPop(context)) Navigator.pop(context);
-  }
-
-  Future<void> _postCallRejection({
-    required String appointmentId,
-    required String doctorId,
-    required String patientId,
-  }) async {
-    try {
-      final payload = CallPayload(
-        callerId: patientId,
-        receiverId: doctorId,
-        appointmentId: appointmentId,
-        roomId: "room_${appointmentId}", // optional for Agora/WebRTC
-        startTime: DateTime.now().toIso8601String(),
-      );
-
-      SocketService().emit(SocketEvents.CALL_REJECTED, payload.toJson());
-
-      debugPrint("📌 CALL_REJECTED saved successfully.");
-    } catch (e) {
-      debugPrint("❌ Error saving CALL_REJECTED: $e");
-    }
-  }
-
+  // ---------------------------------------
+  // Load Appointments
+  // ---------------------------------------
   Future<void> _loadAppointments() async {
-    setState(() {
-      // _loading = true;
-      _error = null;
-    });
+    setState(() => _error = null);
 
     try {
       await NetworkHelper().safeCall(
@@ -191,13 +97,17 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     }
   }
 
+  // Refresh
   Future<void> _refreshAppointments() async {
     await _loadAppointments();
     ToastUtil.success("Appointments updated!");
   }
 
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
+  Color _statusColor(Appointment booking) {
+    if (_isAppointmentExpired(booking)) {
+      return Colors.grey;
+    }
+    switch (booking.status.toLowerCase()) {
       case 'accepted':
         return Colors.green;
       case 'pending':
@@ -209,18 +119,11 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return NetworkAwareScaffold(
-      loading: _loading,
-      error: _error,
-      onRetry: _loadAppointments,
-      child: _buildUI(),
-    );
-  }
-
-  String statusText(String status) {
-    switch (status.toUpperCase()) {
+  String statusText(Appointment booking) {
+    if (_isAppointmentExpired(booking)) {
+      return "EXPIRED";
+    }
+    switch (booking.status.toUpperCase()) {
       case 'CALL_STARTED':
         return "Ringing...";
       case 'CALL_ACCEPTED':
@@ -235,114 +138,93 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
       case 'COMPLETED':
         return "Completed";
       default:
-        return status;
+        return booking.status;
     }
   }
 
+  // ---------------------------------------
+  // Action Buttons
+  // ---------------------------------------
   Widget _renderActions(Appointment booking) {
     final status = booking.status.toUpperCase();
 
-    switch (status) {
-      case 'ONGOING':
-      case 'CALL_ACCEPTED':
-        return Row(
-          children: [
-            Expanded(
-              child: GFButton(
-                onPressed: () {
-                  navigateSlideLeft(
-                    context,
-                    page: VideoCallScreen(
-                      appointmentId: booking.id!,
-                      doctorId: booking.doctor.id,
-                      patientId: booking.patient.id,
-                      isDoctor: false,
-                      onPopCallback: () {},
-                    ),
-                  );
-                },
-                text: "Join Call",
-                color: Colors.green,
-                shape: GFButtonShape.pills,
-              ),
-            ),
-          ],
-        );
-
-      // These show no buttons
-      case 'PENDING':
-      case 'CALL_REJECTED':
-      case 'CALL_MISSED':
-      case 'COMPLETED':
-      default:
-        return const SizedBox.shrink();
+    if (status == 'ONGOING' || status == 'CALL_ACCEPTED') {
+      return GFButton(
+        onPressed: () => navigateSlideLeft(
+          context,
+          page: VideoCallScreen(
+            appointmentId: booking.id!,
+            doctorId: booking.doctor.id,
+            patientId: booking.patient.id,
+            isDoctor: false,
+          ),
+        ),
+        text: "Join Call",
+        color: Colors.green,
+        shape: GFButtonShape.pills,
+      );
     }
+
+    return const SizedBox.shrink();
   }
 
-  Widget _buildUI() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF6F2),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            navigateSlideLeft(context, page: VideoCallHistoryScreen()),
-        icon: const Icon(Icons.history, color: Colors.white),
-        label: const Text("Video Call History"),
-        backgroundColor: const Color(0xFF01312F),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshAppointments,
-        child: bookings.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.7,
-                    child: Center(
-                      child: Text(
-                        _error ?? "No appointments available",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey,
-                        ),
-                      ),
+  // ---------------------------------------
+  // MAIN UI
+  // ---------------------------------------
+  @override
+  Widget build(BuildContext context) {
+    return NetworkAwareScaffold(
+      loading: _loading,
+      error: _error,
+      onRetry: _loadAppointments,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFF6F2),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () =>
+              navigateSlideLeft(context, page: VideoCallHistoryScreen()),
+          icon: const Icon(Icons.history, color: Colors.white),
+          label: const Text("Video Call History"),
+          backgroundColor: const Color(0xFF01312F),
+        ),
+        body: RefreshIndicator(
+          onRefresh: _refreshAppointments,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text(
+                "Doctor Appointments",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+              if (bookings.isEmpty)
+                const Center(
+                  child: Text(
+                    "No appointments available",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              ...bookings.map((booking) {
+                return AppointmentCard(
+                  avatar: CircleAvatar(
+                    radius: 28,
+                    child: SafeAvatar(
+                      imageUrl: ImageUtils.resolve(booking.doctor.profileImage),
+                      size: 120,
                     ),
                   ),
-                ],
-              )
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  const Text(
-                    "Doctor Appointments",
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-
-                  ...bookings.map((booking) {
-                    final statusColor = _statusColor(booking.status);
-
-                    return AppointmentCard(
-                      avatar: CircleAvatar(
-                        radius: 28,
-                        child: SafeAvatar(
-                          imageUrl: ImageUtils.resolve(
-                            booking.doctor.profileImage,
-                          ),
-                          size: 120,
-                        ),
-                      ),
-                      title: booking.doctor.application.personalInfo.fullName,
-                      subtitle: booking.doctor.specialization,
-                      status: statusText(booking.status),
-                      statusColor: statusColor,
-                      date: booking.slot.dateLabel,
-                      timeRange:
-                          "${booking.slot.startTimeLabel} - ${booking.slot.endTimeLabel}",
-                      actionButtons: _renderActions(booking),
-                    );
-                  }),
-                ],
-              ),
+                  title: booking.doctor.application.personalInfo.fullName,
+                  subtitle: booking.doctor.specialization,
+                  status: statusText(booking),
+                  statusColor: _statusColor(booking),
+                  date: booking.slot.dateLabel,
+                  timeRange:
+                      "${booking.slot.startTimeLabel} - ${booking.slot.endTimeLabel}",
+                  actionButtons: _renderActions(booking),
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }

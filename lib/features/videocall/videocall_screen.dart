@@ -16,7 +16,6 @@ class VideoCallScreen extends StatefulWidget {
   final bool isDoctor;
   final String? callerName;
   final bool isIncoming;
-  final VoidCallback onPopCallback;
 
   const VideoCallScreen({
     super.key,
@@ -24,7 +23,6 @@ class VideoCallScreen extends StatefulWidget {
     required this.patientId,
     required this.appointmentId,
     required this.isDoctor,
-    required this.onPopCallback,
     this.callerName,
     this.isIncoming = false,
   });
@@ -171,7 +169,6 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       );
     }
 
-    widget.onPopCallback();
     if (mounted && Navigator.canPop(context)) Navigator.pop(context);
   }
 

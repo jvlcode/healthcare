@@ -18,17 +18,18 @@ import 'package:healthcare/services/socket_service.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key});
+
   @override
   State<DoctorAppointmentsScreen> createState() =>
       _DoctorAppointmentsScreenState();
 }
 
 class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
+  final AppointmentService appointmentService = AppointmentService();
+
   List<Appointment> bookings = [];
   bool _loading = true;
   String? _error;
-
-  final AppointmentService appointmentService = AppointmentService();
 
   @override
   void initState() {
@@ -36,27 +37,26 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     _loadAppointments();
   }
 
+  // ===============================
+  // 📌 Data Fetching
+  // ===============================
   Future<void> _loadAppointments() async {
+    setState(() => _loading = true);
+
     await NetworkHelper().safeCall(
       context,
       () => appointmentService.getUserAppointments(),
       onSuccess: (res) {
-        setState(() {
-          final data = res['data'] as List<dynamic>;
-          bookings = data.map((e) => Appointment.fromJson(e)).toList();
-        });
+        final data = res['data'] as List;
+        bookings = data.map((e) => Appointment.fromJson(e)).toList();
       },
       onApiError: (res) {
-        final map = res as Map<String, dynamic>?;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(map?['message'] ?? 'Load failed')),
-        );
+        ToastUtil.error((res as Map?)?['message'] ?? "Load failed");
       },
       onException: (e) => _error = e.toString(),
     );
-    setState(() {
-      _loading = false;
-    });
+
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _refreshAppointments() async {
@@ -64,7 +64,43 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     ToastUtil.success("Appointments updated!", gravity: ToastGravity.TOP);
   }
 
-  Future<void> handleStatusUpdate(String id, String status) async {
+  // ===============================
+  // 📌 Helpers
+  // ===============================
+  bool isExpired(Appointment a) => DateTime.now().isAfter(a.slot.startDateTime);
+
+  Color statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'accepted':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String displayStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'CALL_ACCEPTED':
+        return "Call in progress";
+      case 'CALL_REJECTED':
+        return "Patient rejected the call";
+      case 'CALL_MISSED':
+        return "Patient missed the call";
+      case 'CALL_CANCELLED':
+        return "Doctor cancelled the call";
+      case 'CALL_DISCONNECTED':
+        return "Call disconnected";
+      default:
+        return status;
+    }
+  }
+
+  Future<void> updateStatus(String id, String status) async {
     await NetworkHelper().safeCall(
       context,
       () => appointmentService.updateAppointmentStatus(
@@ -72,281 +108,235 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         status: status,
       ),
       onSuccess: (_) {
-        setState(() {
-          final index = bookings.indexWhere((b) => b.id == id);
-          if (index != -1) bookings[index].status = status;
-        });
-        if (status == 'CALL_STARTED') {
-          ToastUtil.info("Call started!");
+        final index = bookings.indexWhere((b) => b.id == id);
+        if (index != -1) {
+          setState(() => bookings[index].status = status);
         }
-        if (status == 'ACCEPTED') {
-          ToastUtil.success("You have accepted this appointment!");
-        }
-        if (status == 'COMPLETED') {
-          ToastUtil.success("This appointment has been completed!");
+
+        switch (status) {
+          case 'CALL_STARTED':
+            ToastUtil.info("Call started!");
+            break;
+          case 'ACCEPTED':
+            ToastUtil.success("Appointment accepted!");
+            break;
+          case 'COMPLETED':
+            ToastUtil.success("Appointment completed!");
+            break;
         }
       },
       onApiError: (res) {
-        final map = res as Map<String, dynamic>?;
-        ToastUtil.error(map?['message'] ?? 'Update failed');
+        ToastUtil.error((res as Map?)?['message'] ?? 'Update failed');
       },
-      onException: (e) {
-        setState(() {
-          _error = e.toString();
-        });
-      },
+      onException: (e) => _error = e.toString(),
     );
   }
 
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'accepted':
-        return Colors.green;
-      case 'pending':
-        return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+  Future<bool> confirmAction(String title, String message) async {
+    return await showConfirmationDialog(
+          context: context,
+          title: title,
+          message: message,
+          confirmText: "Yes",
+          cancelText: "No",
+          confirmColor: Colors.red,
+        ) ??
+        false;
   }
 
-  bool _isAppointmentExpired(Appointment booking) =>
-      DateTime.now().isAfter(booking.slot.startDateTime);
+  // ===============================
+  // 📌 Action Buttons Builder
+  // ===============================
+  Widget actionButtons(Appointment a) {
+    final status = a.status.toUpperCase();
+    final expired = isExpired(a);
 
-  Widget _renderActions(Appointment booking) {
-    final status = booking.status.toUpperCase();
-    final isExpired = _isAppointmentExpired(booking);
-
-    if (status == "ACCEPTED" && isExpired) return const SizedBox.shrink();
-
-    // Pending: Accept / Reject buttons
-    if (status == "PENDING") {
-      return Row(
-        children: [
-          Expanded(
-            child: GFButton(
-              onPressed: () => handleStatusUpdate(booking.id, "ACCEPTED"),
-              text: "Accept",
-              color: Colors.green,
-              shape: GFButtonShape.pills,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GFButton(
-              onPressed: () async {
-                final confirmed = await showConfirmationDialog(
-                  context: context,
-                  title: "Reject Appointment",
-                  message: "Are you sure you want to reject this appointment?",
-                  confirmText: "Yes",
-                  cancelText: "No",
-                  confirmColor: Colors.red,
-                );
-                if (confirmed) {
-                  handleStatusUpdate(booking.id, "REJECTED");
-                }
-              },
-              text: "Reject",
-              color: Colors.red,
-              shape: GFButtonShape.pills,
-            ),
-          ),
-        ],
-      );
+    // 🔹 If expired and not completed – show nothing
+    if (expired && status != "COMPLETED") {
+      return const SizedBox.shrink();
     }
 
-    // Accepted / Call rejected / Call disconnected: show chat + video call buttons
-    if (status == "ACCEPTED" ||
-        status == "CALL_REJECTED" ||
-        status == "CALL_DISCONNECTED" ||
-        status == "CALL_ENDED" ||
-        status == "CALL_MISSED") {
-      return Row(
-        children: [
-          Expanded(
-            child: GFButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ChatScreen()),
+    switch (status) {
+      // -----------------------------------------
+      // PENDING → Accept / Reject
+      // -----------------------------------------
+      case "PENDING":
+        return Row(
+          children: [
+            Expanded(
+              child: actionBtn(
+                label: "Accept",
+                color: Colors.green,
+                onTap: () => updateStatus(a.id!, "ACCEPTED"),
               ),
-              text: "Chat",
-              color: const Color(0xFFFF6B35),
-              shape: GFButtonShape.pills,
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GFButton(
-              onPressed: () async {
-                final hasOngoing = bookings.any(
-                  (b) =>
-                      b.doctor.id == booking.doctor.id &&
-                      b.status.toLowerCase() == 'call_started' &&
-                      b.id != booking.id,
-                );
-                if (hasOngoing) {
-                  ToastUtil.error("You already have an ongoing call.");
-                  return;
-                }
+            const SizedBox(width: 10),
+            Expanded(
+              child: actionBtn(
+                label: "Reject",
+                color: Colors.red,
+                onTap: () async {
+                  if (await confirmAction(
+                    "Reject Appointment",
+                    "Are you sure?",
+                  )) {
+                    updateStatus(a.id!, "REJECTED");
+                  }
+                },
+              ),
+            ),
+          ],
+        );
 
-                // 1️⃣ Prepare call payload
-                final payload = CallPayload(
-                  callerId: booking.doctor.id,
-                  receiverId: booking.patient.id,
-                  appointmentId: booking.id!,
-                  doctorName: booking.doctor.application.personalInfo.fullName,
-                  patientName: booking.patient.name,
-                  roomId: "room_${booking.id}", // optional for Agora/WebRTC
-                  startTime: DateTime.now().toIso8601String(),
-                );
-
-                // 2️⃣ Emit socket event
-                SocketService().emit(
-                  SocketEvents.CALL_STARTED,
-                  payload.toJson(),
-                );
-
-                // await handleStatusUpdate(booking.id, "STARTED");
-
-                if (!mounted) return;
-
-                Navigator.push(
+      // ---------------------------------------------------
+      // Accepted or Call states → Chat + Video Call
+      // ---------------------------------------------------
+      case "ACCEPTED":
+      case "CALL_REJECTED":
+      case "CALL_MISSED":
+      case "CALL_DISCONNECTED":
+      case "CALL_ENDED":
+        return Row(
+          children: [
+            Expanded(
+              child: actionBtn(
+                label: "Chat",
+                color: const Color(0xFFFF6B35),
+                onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => VideoCallScreen(
-                      appointmentId: booking.id,
-                      doctorId: booking.doctor.id,
-                      patientId: booking.patient.id,
-                      isDoctor: true,
-                      onPopCallback: _loadAppointments,
-                    ),
-                  ),
-                );
-              },
-              text: "Video Call",
-              icon: const Icon(Icons.videocam, color: Colors.white),
-              color: Colors.blue,
-              shape: GFButtonShape.pills,
+                  MaterialPageRoute(builder: (_) => const ChatScreen()),
+                ),
+              ),
             ),
-          ),
-        ],
-      );
-    }
+            const SizedBox(width: 10),
+            Expanded(
+              child: actionBtn(
+                label: "Video Call",
+                color: Colors.blue,
+                icon: const Icon(Icons.videocam, color: Colors.white),
+                onTap: () => startCall(a),
+              ),
+            ),
+          ],
+        );
 
-    // Started: Join / Complete
-    if (status == "CALL_STARTED" || status == "CALL_ACCEPTED") {
-      return Row(
-        children: [
-          Expanded(
-            child: GFButton(
-              onPressed: () async {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text("Complete Appointment"),
-                    content: const Text(
-                      "Are you sure you want to complete the appointment?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("No"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text("Yes"),
-                      ),
-                    ],
-                  ),
-                );
-                if (ok == true) handleStatusUpdate(booking.id, "COMPLETED");
-              },
-              text: "Complete",
-              color: Colors.orange,
-              shape: GFButtonShape.pills,
+      // -----------------------------------------
+      // Ongoing call → Join / Complete
+      // -----------------------------------------
+      case "CALL_STARTED":
+      case "CALL_ACCEPTED":
+        return Row(
+          children: [
+            Expanded(
+              child: actionBtn(
+                label: "Complete",
+                color: Colors.orange,
+                onTap: () async {
+                  if (await confirmAction(
+                    "Complete",
+                    "Finish this appointment?",
+                  )) {
+                    updateStatus(a.id!, "COMPLETED");
+                  }
+                },
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GFButton(
-              onPressed: () async {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VideoCallScreen(
-                      appointmentId: booking.id,
-                      doctorId: booking.doctor.id,
-                      patientId: booking.patient.id,
-                      isDoctor: true,
-                      onPopCallback: _loadAppointments,
-                    ),
-                  ),
-                );
-              },
-              text: "Join Call",
-              color: Colors.green,
-              shape: GFButtonShape.pills,
+            const SizedBox(width: 10),
+            Expanded(
+              child: actionBtn(
+                label: "Join Call",
+                color: Colors.green,
+                onTap: () => openCall(a),
+              ),
             ),
-          ),
-        ],
-      );
+          ],
+        );
     }
 
     return const SizedBox.shrink();
   }
 
-  Widget _buildAppointmentList() {
-    if (bookings.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: const Center(
-              child: Text(
-                "No appointments available",
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-            ),
+  // ===============================
+  // 📌 Single Button Builder
+  // ===============================
+  GFButton actionBtn({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    Widget? icon,
+  }) {
+    return GFButton(
+      onPressed: onTap,
+      text: label,
+      icon: icon,
+      color: color,
+      shape: GFButtonShape.pills,
+    );
+  }
+
+  // ===============================
+  // 📌 Call Logic
+  // ===============================
+  void startCall(Appointment a) {
+    final payload = CallPayload(
+      callerId: a.doctor.id,
+      receiverId: a.patient.id,
+      appointmentId: a.id!,
+      doctorName: a.doctor.application.personalInfo.fullName,
+      patientName: a.patient.name,
+      roomId: "room_${a.id}",
+      startTime: DateTime.now().toIso8601String(),
+    );
+
+    SocketService().emit(SocketEvents.CALL_STARTED, payload.toJson());
+
+    openCall(a);
+  }
+
+  void openCall(Appointment a) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PopScope(
+          onPopInvokedWithResult: (didPop, result) {
+            _refreshAppointments();
+          },
+          child: VideoCallScreen(
+            appointmentId: a.id!,
+            doctorId: a.doctor.id,
+            patientId: a.patient.id,
+            isDoctor: true,
           ),
-        ],
-      );
-    }
+        ),
+      ),
+    );
+  }
 
-    String statusText(status) {
-      switch (status) {
-        case 'CALL_ACCEPTED':
-          return "Call in progress";
-        case 'CALL_REJECTED':
-          return "Patient rejected the call";
-        case 'CALL_MISSED':
-          return "Patient missed the call";
-        case 'CALL_CANCELLED':
-          return "Doctor cancelled the call";
-        case 'CALL_DISCONNECTED':
-          return "Call disconnected";
-        default:
-          return "Waiting for response...";
-      }
-    }
-
+  // ===============================
+  // 📌 Appointment List UI
+  // ===============================
+  Widget buildList() {
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
           "Patient Appointments",
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
+        if (bookings.isEmpty)
+          const Center(
+            child: Text(
+              "No appointments available",
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          ),
         const SizedBox(height: 12),
         ...bookings.map((b) {
-          final isExpired = _isAppointmentExpired(b);
+          final expired = isExpired(b);
           final status = b.status.toUpperCase();
-          final displayStatus = (isExpired && status != "COMPLETED")
+          final display = expired && status != "COMPLETED"
               ? "EXPIRED"
-              : statusText(status);
+              : displayStatus(status);
 
           return AppointmentCard(
             avatar: CircleAvatar(
@@ -358,28 +348,29 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             ),
             title: b.patient.name,
             subtitle: "Age: ${b.age} | Reason: ${b.reason}",
-            status: displayStatus,
-            statusColor: displayStatus == "EXPIRED"
-                ? Colors.grey
-                : _statusColor(displayStatus),
+            status: display,
+            statusColor: statusColor(display),
             date: b.slot.dateLabel,
             timeRange: "${b.slot.startTimeLabel} - ${b.slot.endTimeLabel}",
-            actionButtons: _renderActions(b),
+            actionButtons: actionButtons(b),
           );
-        }).toList(),
+        }),
       ],
     );
   }
 
+  // ===============================
+  // 📌 Build
+  // ===============================
   @override
   Widget build(BuildContext context) {
     return NetworkAwareScaffold(
-      error: _error,
       loading: _loading,
+      error: _error,
       onRetry: _refreshAppointments,
       child: RefreshIndicator(
         onRefresh: _refreshAppointments,
-        child: _buildAppointmentList(),
+        child: buildList(),
       ),
     );
   }
