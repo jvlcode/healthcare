@@ -57,7 +57,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   // ---------------------------------------
   // Incoming Call Handler
   // ---------------------------------------
-  void _handleIncomingCall(CallPayload call) {
+  void _handleIncomingCall(CallPayload payload) {
     navigateSlideLeft(
       context,
       page: PopScope(
@@ -65,12 +65,9 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
           _refreshAppointments();
         },
         child: VideoCallScreen(
-          appointmentId: call.appointmentId,
-          doctorId: call.callerId,
-          patientId: call.receiverId,
           isDoctor: false,
           isIncoming: true,
-          callerName: call.doctorName ?? "Caller",
+          payload: payload,
         ),
       ),
     );
@@ -155,7 +152,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
         onPressed: () => navigateSlideLeft(
           context,
           page: ChatScreen(
-            toId: booking.doctor.id,
+            toUserId: booking.doctor.user!.id,
             displayName: booking.doctor.name,
           ),
         ),

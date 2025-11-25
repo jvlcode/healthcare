@@ -206,7 +206,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => ChatScreen(
-                      toId: a.patient.id,
+                      toUserId: a.patient.id,
                       displayName: a.patient.name,
                     ),
                   ),
@@ -266,7 +266,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
               child: actionBtn(
                 label: "Join Call",
                 color: Colors.green,
-                onTap: () => openCall(a),
+                onTap: () => startCall(a),
               ),
             ),
           ],
@@ -297,23 +297,21 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   // ===============================
   // 📌 Call Logic
   // ===============================
+
   void startCall(Appointment a) {
     final payload = CallPayload(
-      callerId: a.doctor.id,
-      receiverId: a.patient.id,
+      fromUserId: a.doctor.user!.id,
+      toUserId: a.patient.id,
+      doctorId: a.doctor.id,
       appointmentId: a.id!,
       doctorName: a.doctor.application.personalInfo.fullName,
       patientName: a.patient.name,
       roomId: "room_${a.id}",
       startTime: DateTime.now().toIso8601String(),
+      patientId: a.patient.id,
     );
 
     SocketService().emit(SocketEvents.CALL_STARTED, payload.toJson());
-
-    openCall(a);
-  }
-
-  void openCall(Appointment a) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -321,12 +319,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           onPopInvokedWithResult: (didPop, result) {
             _refreshAppointments();
           },
-          child: VideoCallScreen(
-            appointmentId: a.id!,
-            doctorId: a.doctor.id,
-            patientId: a.patient.id,
-            isDoctor: true,
-          ),
+          child: VideoCallScreen(isDoctor: true, payload: payload),
         ),
       ),
     );

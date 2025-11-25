@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/services/chat_service.dart';
 import 'package:healthcare/services/socket_service.dart'; // make sure path is correct
 
 class ChatScreen extends StatefulWidget {
-  final String toId;
+  final String toUserId;
   final String displayName;
-  const ChatScreen({super.key, required this.toId, required this.displayName});
+  const ChatScreen({
+    super.key,
+    required this.toUserId,
+    required this.displayName,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -13,13 +18,63 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   final TextEditingController _controller = TextEditingController();
+  String? _chatId;
+  bool _isLoading = true;
+  final ChatService _chatService = ChatService();
 
   final socket = SocketService();
 
   @override
   void initState() {
     super.initState();
-    _initSocketListeners();
+    _initChat();
+  }
+
+  Future<void> _initChat() async {
+    try {
+      // First fetch all chats of the user
+      final res = await _chatService.getUserChats();
+      final chats = res["data"] as List;
+      // Check if chat already exists with widget.toId
+      final existing = chats.firstWhere((c) {
+        final participants = List.from(c["participants"]);
+        return participants.contains(widget.toUserId);
+      }, orElse: () => null);
+      print("existing $existing");
+      if (existing != null) {
+        // Chat already exists
+        _chatId = existing["_id"];
+
+        // Load existing messages
+        final res = await _chatService.getMessages(_chatId!);
+        final messages = res["data"] as List;
+        print("[messages] $messages");
+        setState(() {
+          _messages.addAll(
+            messages.map((m) {
+              return {
+                "isUser": m["sender"] != widget.toUserId,
+                "text": m["text"],
+              };
+            }),
+          );
+        });
+      } else {
+        // Create new chat
+        final res = await _chatService.startChat(otherUserId: widget.toUserId);
+        final newChat = res['data'];
+
+        _chatId = newChat["_id"];
+      }
+      print("_chatId$_chatId");
+
+      // Now setup socket listener
+      await _initSocketListeners();
+    } catch (e) {
+      print("Chat init failed: $e");
+    }
+
+    setState(() => _isLoading = false);
   }
 
   Future<void> _initSocketListeners() async {
@@ -29,7 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final type = event["event"];
       final data = event["data"];
 
-      if (type == SocketEvents.CHAT_MESSAGE) {
+      if (type == SocketEvents.CHAT_MESSAGE && data["chatId"] == _chatId) {
         _handleMessages(data);
       }
     });
@@ -43,25 +98,32 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _sendMessage() {
-    if (_controller.text.trim().isEmpty) return;
+  void _sendMessage() async {
+    print(_controller.text);
+    print(_chatId);
+    if (_controller.text.trim().isEmpty || _chatId == null) return;
 
     String text = _controller.text.trim();
 
-    // Push to UI immediately
     setState(() {
       _messages.add({"isUser": true, "text": text});
     });
 
-    // Emit to server
-    socket.emit(SocketEvents.CHAT_MESSAGE, {
-      "text": text,
-      "to": widget.toId,
-      "timestamp": DateTime.now().toIso8601String(),
-      // Add user / appointment / receiverId as needed
-    });
-
     _controller.clear();
+
+    // // First send via API
+    // await _chatService(
+    //   chatId: _chatId!,
+    //   receiverId: widget.toId,
+    //   message: text,
+    // );
+
+    // Then push to socket for live update
+    socket.emit(SocketEvents.CHAT_MESSAGE, {
+      "chatId": _chatId,
+      "text": text,
+      "toUserId": widget.toUserId,
+    });
   }
 
   @override

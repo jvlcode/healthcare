@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:healthcare/models/call_payload_model.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/constants/urls.dart';
@@ -27,6 +28,7 @@ class SocketService {
   IO.Socket? _socket;
   bool _connected = false;
   bool get isConnected => _connected;
+  String userId = '';
   // Add this line 👇
   IO.Socket? get socket => _socket;
 
@@ -50,10 +52,8 @@ class SocketService {
     }
 
     final completer = Completer<void>();
-
-    final query = user.doctor?.id != null
-        ? {"doctorId": user.doctor!.id}
-        : {"patientId": user.id};
+    userId = user.id;
+    final query = {"userId": userId};
 
     _socket = IO.io(
       AppUrls.baseUrl,
@@ -118,9 +118,13 @@ class SocketService {
 
   void emit(String event, Map<String, dynamic> payload) {
     /// Emit events safely
+    ///
     if (!_connected || _socket == null) {
       print("⚠ Cannot emit. Socket not connected.");
       return;
+    }
+    if (payload['fromUserId'] == null) {
+      payload['fromUserId'] = userId;
     }
     print("[$event] $payload");
     _socket!.emit(event, payload);

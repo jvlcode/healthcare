@@ -7,19 +7,10 @@ typedef RemoteJoinedCallback = void Function(int uid);
 typedef RemoteLeftCallback = void Function(int uid);
 
 class VideoCallController extends ChangeNotifier {
-  final String appointmentId;
-  final String doctorId;
-  final String patientId;
   final String channelName;
-  final bool isDoctor;
+  final int uid;
 
-  VideoCallController({
-    required this.appointmentId,
-    required this.doctorId,
-    required this.patientId,
-    required this.channelName,
-    required this.isDoctor,
-  });
+  VideoCallController({required this.uid, required this.channelName});
 
   final AgoraService agora = AgoraService();
 
@@ -52,10 +43,6 @@ class VideoCallController extends ChangeNotifier {
     if (_disposed) return;
 
     try {
-      final uid = isDoctor ? 1001 : 2001;
-      _currentUid = uid;
-      _currentChannel = channelName;
-
       _safeUpdate(() {
         remoteUid = null;
         isReady = false;
@@ -104,35 +91,10 @@ class VideoCallController extends ChangeNotifier {
       _safeUpdate(() => isReady = true);
 
       // 5️⃣ Run backend updates in background
-      _sendCallAcceptanceAsync();
+      // _sendCallAcceptanceAsync();
     } catch (e, st) {
       debugPrint("Error starting call: $e");
       debugPrintStack(stackTrace: st);
-    }
-  }
-
-  Future<void> _sendCallAcceptanceAsync() async {
-    try {
-      // Create video call entry if not already available
-      if (videocallId.isEmpty) {
-        final res = await VideoCallService().createVideocall(
-          doctorId: doctorId,
-          patientId: patientId,
-          appointmentId: appointmentId,
-        );
-
-        final data = res['data'];
-        final callId = data?['_id'] as String?;
-
-        if (res['success'] == true && callId != null) {
-          videocallId = callId;
-          debugPrint("📌 Video call record saved: $callId");
-        } else {
-          debugPrint("❌ Failed to store video call record");
-        }
-      }
-    } catch (e) {
-      debugPrint("❌ Background call update failed: $e");
     }
   }
 

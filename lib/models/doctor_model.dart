@@ -2,6 +2,7 @@
 
 import 'package:healthcare/models/review_model.dart';
 import 'package:healthcare/models/slot_model.dart';
+import 'package:healthcare/models/user_model.dart';
 
 class Doctor {
   final String id;
@@ -14,6 +15,7 @@ class Doctor {
 
   final Application application;
   final String bio;
+  final User? user;
   final List<Review> recentReviews;
 
   Doctor({
@@ -27,6 +29,7 @@ class Doctor {
     required this.bio,
     required this.recentReviews,
     required this.approved,
+    this.user,
   });
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
@@ -69,6 +72,7 @@ class Doctor {
         bio: doctorJson["bio"] ?? "",
         recentReviews: [],
         approved: doctorJson["approved"] ?? false,
+        user: User.fromJson(doctorJson["user"]),
       );
     } catch (e, stack) {
       print('❌ Failed to parse Doctor: $e');

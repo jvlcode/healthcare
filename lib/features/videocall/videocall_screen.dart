@@ -5,25 +5,17 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 import 'package:healthcare/models/call_payload_model.dart';
 import 'package:healthcare/services/socket_service.dart';
-import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/features/videocall/videocall_controller.dart';
 
 class VideoCallScreen extends StatefulWidget {
-  final String doctorId;
-
-  final String patientId;
-  final String appointmentId;
   final bool isDoctor;
-  final String? callerName;
   final bool isIncoming;
+  final CallPayload payload;
 
   const VideoCallScreen({
     super.key,
-    required this.doctorId,
-    required this.patientId,
-    required this.appointmentId,
     required this.isDoctor,
-    this.callerName,
+    required this.payload,
     this.isIncoming = false,
   });
 
@@ -35,22 +27,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   late final VideoCallController _controller;
   AudioPlayer? _audioPlayer;
   Timer? _timeoutTimer;
-
   bool _remoteJoined = false;
   bool _callAnswered = false;
   bool _isDisconnected = false;
   bool _isMissed = false;
   bool _hasEnded = false;
-
   @override
   void initState() {
     super.initState();
     _controller = VideoCallController(
-      appointmentId: widget.appointmentId,
-      doctorId: widget.doctorId,
-      patientId: widget.patientId,
-      channelName: "appointment_${widget.appointmentId}",
-      isDoctor: widget.isDoctor,
+      channelName: "appointment_${widget.payload.appointmentId}",
+      uid: widget.isDoctor ? 1000 : 9999,
     );
 
     if (widget.isIncoming && !widget.isDoctor) {
@@ -108,7 +95,6 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       _remoteJoined = true;
       _isDisconnected = false;
     });
-    ToastUtil.success(widget.isDoctor ? "Patient joined!" : "Doctor joined!");
   }
 
   void _onRemoteLeft(int uid) {
@@ -155,16 +141,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     _hasEnded = true;
 
     _stopRingtone();
-    // _controller.endCall(status);
 
     // Only emit to server if this was a local action
     if (!isRemoteEvent) {
       SocketService().emit(
         status,
         CallPayload(
-          callerId: _controller.doctorId,
-          receiverId: _controller.patientId,
-          appointmentId: _controller.appointmentId,
+          fromUserId: widget.payload.fromUserId,
+          toUserId: widget.payload.toUserId,
+          doctorId: widget.payload.doctorId,
+          patientId: widget.payload.patientId,
+          appointmentId: widget.payload.appointmentId,
         ).toJson(),
       );
     }
@@ -243,7 +230,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
             const Icon(Icons.call, color: Colors.green, size: 70),
             const SizedBox(height: 24),
             Text(
-              widget.callerName ?? "Caller",
+              widget.payload.callerName ?? "Caller",
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 26,
