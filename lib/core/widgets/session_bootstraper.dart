@@ -7,6 +7,7 @@ import 'package:healthcare/models/doctor_application_form_model.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
+import 'package:healthcare/services/socket_service.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 
@@ -63,6 +64,8 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
         validateInBackground: validateInBackground,
       );
       print("🟢 Session Loaded, user: ${user?.toJson()}");
+      SocketService().init();
+      print("🟢 Socket connection completed");
     } catch (e) {
       print("❌ Session init failed: $e");
     }

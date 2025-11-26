@@ -60,7 +60,6 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   // SOCKET EVENTS
   // -------------------------
   Future<void> _initSocketListeners() async {
-    await SocketService().init();
     final eventsMap = {
       SocketEvents.CALL_REJECTED: "Call rejected by the other user",
       SocketEvents.CALL_ENDED: "Call ended",

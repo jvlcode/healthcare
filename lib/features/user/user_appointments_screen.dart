@@ -38,8 +38,6 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   }
 
   Future<void> _initSocketListeners() async {
-    await socket.init();
-
     socket.onCallEvent.listen((event) {
       final type = event["event"];
       final data = event["data"];
@@ -144,8 +142,11 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   // Action Buttons
   // ---------------------------------------
   Widget _renderActions(Appointment booking) {
-    final status = booking.status.toUpperCase();
-    const notAllowedStatuses = ['PENDING', 'COMPLETED', 'REJECTED'];
+    String status = booking.status.toUpperCase();
+    final notAllowedStatuses = ['PENDING', 'COMPLETED', 'REJECTED', 'EXPIRED'];
+    if (_isAppointmentExpired(booking)) {
+      status = "EXPIRED";
+    }
 
     if (!notAllowedStatuses.contains(status)) {
       return GFButton(

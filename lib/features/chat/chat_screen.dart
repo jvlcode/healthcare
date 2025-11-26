@@ -83,8 +83,6 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Socket listeners
   /// -------------------------------
   Future<void> _initSocketListeners() async {
-    await socket.init();
-
     socket.onCallEvent.listen((event) {
       final type = event["event"];
       final data = event["data"];
@@ -97,12 +95,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _handleIncomingMessage(dynamic data) {
     if (!mounted) return;
-
+    print(" CHAT $data");
     setState(() {
       _messages.add({
         "isUser": false,
         "text": data["text"],
-        "time": DateTime.parse(data["createdAt"]).toLocal(),
+        "time": DateTime.now().toLocal(),
       });
     });
 

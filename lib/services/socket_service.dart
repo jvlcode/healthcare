@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:healthcare/models/call_payload_model.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/constants/urls.dart';
