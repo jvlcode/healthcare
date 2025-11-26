@@ -6,8 +6,27 @@ import 'package:hive/hive.dart';
 class SessionManager {
   static final _secureStorage = FlutterSecureStorage();
 
+  // New key for first login
+  static const _firstLoginKey = 'first_login';
+
   /// Flag to mark session invalid if ACCESS_DENIED
   static bool sessionInvalid = false;
+
+  /// Check if this is the first login / first app launch
+  static Future<bool> isFirstLogin() async {
+    final value = await _secureStorage.read(key: _firstLoginKey);
+    if (value == null) {
+      // First time, mark as true by default
+      await _secureStorage.write(key: _firstLoginKey, value: 'true');
+      return true;
+    }
+    return value == 'true';
+  }
+
+  /// Mark first login as completed
+  static Future<void> setFirstLogin({String value = 'false'}) async {
+    await _secureStorage.write(key: _firstLoginKey, value: value);
+  }
 
   /// Initialize session: validate token if server reachable
   static Future<User?> initializeSession({bool validate = true}) async {

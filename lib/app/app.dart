@@ -6,18 +6,22 @@ import 'package:healthcare/models/user_model.dart';
 
 class MyApp extends StatelessWidget {
   final User? user;
-  const MyApp(this.user, {super.key});
+  final bool isFirstLogin;
+  const MyApp(this.user, this.isFirstLogin, {super.key});
 
   @override
   Widget build(BuildContext context) {
     // print("MYAPP ${user?.toJson()}");
     // Navigator is guaranteed available
 
-    final initialRoute = user == null
+    final initialRoute = isFirstLogin
+        ? AppRoutes.gettingStarted
+        : user == null
         ? AppRoutes.login
         : user!.role.toUpperCase() == 'DOCTOR'
         ? AppRoutes.doctorHome
         : AppRoutes.userHome;
+    ;
 
     return MaterialApp(
       title: 'Healthcare App',

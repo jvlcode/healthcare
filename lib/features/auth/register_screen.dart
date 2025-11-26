@@ -53,6 +53,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),
       ),
+      // 👇 Add this to control label color when focused
+      floatingLabelStyle: const TextStyle(
+        color: Color(0xFFFF6B3D), // or any contrasting color
+        fontSize: 15,
+      ),
+
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
@@ -141,12 +147,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           final registeredUser = User.fromJson(json);
 
           // Save securely
-          // const store = FlutterSecureStorage();
-          // await store.write(key: 'access_token', value: token);
-          // await store.write(key: 'refresh_token', value: refresh);
-
-          // final box = await Hive.openBox('userBox');
-          // await box.put('user', registeredUser.toJson());
           SessionManager.saveSession(json, token, refresh);
 
           ToastUtil.success("Registration Successful");
@@ -307,11 +307,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Register"), centerTitle: true),
+      backgroundColor: Color(0xFF004D4D),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             key: ValueKey(_step),
             children: [
               Row(
@@ -333,7 +335,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
 
-              Expanded(
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 25,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: SingleChildScrollView(
                   child: [step0, step1, step2][_step],
                 ),

@@ -15,6 +15,7 @@ import 'package:healthcare/features/doctor/application/step1.dart';
 import 'package:healthcare/features/doctor/application/step2.dart';
 import 'package:healthcare/features/doctor/application/step3.dart';
 import 'package:healthcare/features/doctor/application/step4.dart';
+import 'package:healthcare/features/onboarding/getting_started_screen.dart';
 
 // User
 import 'package:healthcare/features/user/user_home_screen.dart';
@@ -29,6 +30,9 @@ class AppRoutes {
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password';
+
+  // Onboarding
+  static const gettingStarted = '/getting-started';
 
   // User
   static const userHome = '/user';
@@ -54,6 +58,9 @@ class AppRoutes {
     register: (context) => RegisterScreen(),
     forgotPassword: (context) => ForgotPasswordScreen(),
     resetPassword: (context) => ResetPasswordScreen(),
+
+    //OnBoarding
+    gettingStarted: (context) => GettingStartedScreen(),
 
     // User
     userHome: (context) => UserHomeScreen(),

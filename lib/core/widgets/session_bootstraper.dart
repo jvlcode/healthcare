@@ -6,6 +6,7 @@ import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/splash_screen.dart';
+import 'package:healthcare/features/onboarding/getting_started_screen.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:healthcare/services/socket_service.dart';
@@ -22,6 +23,7 @@ class SessionBootstrapper extends StatefulWidget {
 class _SessionBootstrapperState extends State<SessionBootstrapper> {
   User? user;
   bool isLoading = true;
+  bool isFirstLogin = false;
   bool serverUnreachable = false;
   bool shouldRedirectToLogin = false;
 
@@ -39,6 +41,8 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
       // 1. Initialize Hive Boxes
       // ---------------------------
       await _initHive();
+      // await SessionManager.setFirstLogin(value: 'true');
+      isFirstLogin = await SessionManager.isFirstLogin();
 
       // ---------------------------
       // 2. Server Reachability
@@ -71,11 +75,6 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
             gravity: ToastGravity.TOP,
           );
         }
-        if (!mounted) return;
-        setState(() {
-          shouldRedirectToLogin = true;
-          isLoading = false;
-        });
         print("⚠️ Skipping socket init — no logged-in user.");
       }
     } catch (e, stack) {
@@ -110,6 +109,7 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
 
     return MyApp(
       user,
+      isFirstLogin,
     ); // MyApp already contains MaterialApp// MyApp already wraps MaterialApp with theme
   }
 }
