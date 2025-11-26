@@ -12,7 +12,6 @@ class SessionManager {
   /// Initialize session: validate token if server reachable
   static Future<User?> initializeSession({bool validate = true}) async {
     final accessToken = await getAccessToken();
-    final refreshToken = await getRefreshToken();
     final user = await getCurrentUser();
 
     if (accessToken == null || user == null) return null;
@@ -21,7 +20,7 @@ class SessionManager {
     sessionInvalid = false;
 
     if (validate) {
-      final valid = await _validateToken(refreshToken);
+      final valid = await _validateToken();
       if (!valid) {
         sessionInvalid = true;
         return null; // Do NOT return user if token invalid
@@ -32,7 +31,7 @@ class SessionManager {
   }
 
   /// Validate token synchronously
-  static Future<bool> _validateToken(String? refreshToken) async {
+  static Future<bool> _validateToken() async {
     try {
       final result = await AuthService().validateAccessToken();
       final message = result['message']?.toString().toUpperCase();
@@ -41,8 +40,9 @@ class SessionManager {
       if (result['success'] == true) return true;
 
       // 2️⃣ Token expired → try refresh
-      if (message == 'TOKEN_EXPIRED' && refreshToken != null) {
+      if (message == 'TOKEN_EXPIRED') {
         final refreshed = await refreshAccessToken();
+        await clearSession();
         return refreshed;
       }
 
