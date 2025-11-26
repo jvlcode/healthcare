@@ -44,7 +44,7 @@ class NetworkAwareScaffold extends StatelessWidget {
     } else if (error != null) {
       body = Center(
         child: Text(
-          error ?? "Something went wrong",
+          "Something went wrong",
           style: const TextStyle(color: Colors.red),
         ),
       );

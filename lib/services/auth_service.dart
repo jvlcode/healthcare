@@ -57,6 +57,7 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> validateAccessToken() async {
+    print("validateAccessToken");
     return await _apiClient.get("users/me", useAuth: true);
   }
 

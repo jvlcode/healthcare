@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/app.dart';
+import 'package:healthcare/app/app_theme.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/widgets/splash_screen.dart';
+import 'package:healthcare/features/auth/login_screen.dart';
 import 'package:healthcare/models/doctor_application_form_model.dart';
 import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/user_model.dart';
@@ -22,6 +26,7 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
   User? user;
   bool isLoading = true;
   bool serverUnreachable = false;
+  bool shouldRedirectToLogin = false;
 
   @override
   void initState() {
@@ -30,56 +35,84 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
   }
 
   Future<void> bootstrap() async {
-    bool validateInBackground = true;
     print("🔵 BOOTSTRAP STARTED");
 
-    await Hive.openBox('auth');
-    await Hive.deleteBoxFromDisk('doctor_application');
-    await Hive.openBox('doctor_application');
-    await Hive.openBox('settings');
-
-    print("🟢 Hive Boxes Opened");
-
-    // ✅ Check server first
-    final reachability = Provider.of<ReachabilityController>(
-      context,
-      listen: false,
-    );
-
-    // // ✅ Start periodic monitoring
-    // reachability.startMonitoring(); // 🔥 Add this line
-
-    final reachable = await AuthService().isServerReachable();
-    reachability.updateReachability(reachable);
-
-    if (!reachable) {
-      validateInBackground = false;
-      print("⚠️ Server unreachable — skipping session init");
-      if (!mounted) return;
-    }
-
-    // ✅ Safe to initialize session now
     try {
-      user = await SessionManager.initializeSession(
-        validateInBackground: validateInBackground,
-      );
-      print("🟢 Session Loaded, user: ${user?.toJson()}");
-      SocketService().init();
-      print("🟢 Socket connection completed");
-    } catch (e) {
-      print("❌ Session init failed: $e");
+      // ---------------------------
+      // 1. Initialize Hive Boxes
+      // ---------------------------
+      await _initHive();
+
+      // ---------------------------
+      // 2. Server Reachability
+      // ---------------------------
+      final reachability = context.read<ReachabilityController>();
+
+      final serverReachable = await AuthService().isServerReachable();
+      reachability.updateReachability(serverReachable);
+
+      if (!serverReachable) {
+        print("⚠️ Server unreachable — skip validation, load cached user");
+
+        // Load cached user only
+        user = await SessionManager.getCurrentUser();
+      } else {
+        // ---------------------------
+        // 3. Initialize Session with validation
+        // ---------------------------
+        user = await SessionManager.initializeSession(validate: true);
+      }
+      // ---------------------------
+      // 4. Socket Init
+      // ---------------------------
+      if (user != null) {
+        SocketService().init();
+      } else {
+        if (SessionManager.sessionInvalid) {
+          ToastUtil.error(
+            "Session Invalid...Please Login",
+            gravity: ToastGravity.TOP,
+          );
+        }
+        if (!mounted) return;
+        setState(() {
+          shouldRedirectToLogin = true;
+          isLoading = false;
+        });
+        print("⚠️ Skipping socket init — no logged-in user.");
+      }
+    } catch (e, stack) {
+      print("❌ Bootstrap error: $e");
+      print(stack);
     }
 
     if (!mounted) return;
-    setState(() => isLoading = false);
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> _initHive() async {
+    await Hive.openBox('auth');
+
+    // ❗ If you always delete the doctor_application box,
+    // just recreate instead of open + delete + open
+    await Hive.deleteBoxFromDisk('doctor_application');
+    await Hive.openBox('doctor_application');
+
+    await Hive.openBox('settings');
+
+    print("🟢 Hive Boxes Ready");
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const MaterialApp(home: SplashScreen());
+      return MaterialApp(theme: AppTheme.light, home: SplashScreen());
     }
 
-    return MyApp(user: user);
+    return MyApp(
+      user,
+    ); // MyApp already contains MaterialApp// MyApp already wraps MaterialApp with theme
   }
 }
