@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
-import 'package:hive/hive.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
+import 'package:healthcare/core/helpers/field_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -42,33 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isConfirmVisible = false;
   bool _loading = false;
 
-  InputDecoration _field(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: Colors.grey[100],
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      // 👇 Add this to control label color when focused
-      floatingLabelStyle: const TextStyle(
-        color: Color(0xFFFF6B3D), // or any contrasting color
-        fontSize: 15,
-      ),
-
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.secondary,
-          width: 1.5,
-        ),
-      ),
-    );
-  }
-
   void _nextStep() {
     final form = _formKeys[_step].currentState!;
     if (!form.validate()) return;
@@ -97,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _sendOtp() {
     if (_phone.text.trim().length != 10) {
-      ToastUtil.info("Enter valid 10-digit phone");
+      ToastUtil.error("Enter valid 10-digit phone");
       return;
     }
     setState(() => _otpSent = true);
@@ -207,13 +180,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             controller: _name,
-            decoration: _field("Full Name", Icons.person),
+            decoration: fieldDecoration(context, "Full Name", Icons.person),
             validator: (v) => v!.isEmpty ? "Enter name" : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _email,
-            decoration: _field("Email", Icons.email),
+            decoration: fieldDecoration(context, "Email", Icons.email),
             validator: (v) {
               if (v!.isEmpty) return "Enter email";
               if (!RegExp(r'^[\w-]+@([\w-]+\.)+[\w]{2,4}$').hasMatch(v)) {
@@ -232,8 +205,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           TextFormField(
             controller: _phone,
-            decoration: _field("Phone", Icons.phone),
+            decoration: fieldDecoration(context, "Phone", Icons.phone),
             validator: (v) => v!.length == 10 ? null : "Enter 10-digit phone",
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(
+                10,
+              ), // 👈 limits to 10 characters
+              FilteringTextInputFormatter.digitsOnly, // 👈 allows only numbers
+            ],
           ),
           const SizedBox(height: 12),
           if (!_otpSent)
@@ -247,7 +226,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 TextFormField(
                   controller: _otp,
-                  decoration: _field("Enter OTP", Icons.verified),
+                  decoration: fieldDecoration(
+                    context,
+                    "Enter OTP",
+                    Icons.verified,
+                  ),
                   validator: (v) => v!.isEmpty ? "Enter OTP" : null,
                 ),
                 const SizedBox(height: 12),
@@ -274,30 +257,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             controller: _password,
             obscureText: !_isPasswordVisible,
-            decoration: _field("Password", Icons.lock).copyWith(
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+            decoration: fieldDecoration(context, "Password", Icons.lock)
+                .copyWith(
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(
+                      () => _isPasswordVisible = !_isPasswordVisible,
+                    ),
+                  ),
                 ),
-                onPressed: () =>
-                    setState(() => _isPasswordVisible = !_isPasswordVisible),
-              ),
-            ),
             validator: (v) => v!.length < 6 ? "Minimum 6 characters" : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _confirm,
             obscureText: !_isConfirmVisible,
-            decoration: _field("Confirm Password", Icons.lock).copyWith(
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isConfirmVisible ? Icons.visibility : Icons.visibility_off,
+            decoration: fieldDecoration(context, "Confirm Password", Icons.lock)
+                .copyWith(
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isConfirmVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () =>
+                        setState(() => _isConfirmVisible = !_isConfirmVisible),
+                  ),
                 ),
-                onPressed: () =>
-                    setState(() => _isConfirmVisible = !_isConfirmVisible),
-              ),
-            ),
             validator: (v) =>
                 v != _password.text ? "Passwords don't match" : null,
           ),
@@ -313,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             key: ValueKey(_step),
             children: [
               Row(
@@ -370,8 +360,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       )
                     : Text(_step < 2 ? "Next" : "Register"),
               ),
+
               if (_step > 0)
-                TextButton(onPressed: _prevStep, child: const Text("Back")),
+                TextButton(
+                  onPressed: _prevStep,
+                  child: const Text(
+                    "Back",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              if (_step == 0)
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Already have an account? ",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(context, "/login");
+                        },
+                        child: Text(
+                          'Login',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),

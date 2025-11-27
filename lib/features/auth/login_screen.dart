@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/helpers/field_helper.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/models/user_model.dart';
@@ -177,7 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _inputDecoration(
+                      decoration: fieldDecoration(
+                        context,
                         'Email or Phone',
                         Icons.person,
                       ),
@@ -189,8 +191,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
-                      decoration: _inputDecoration('Password', Icons.lock)
-                          .copyWith(
+                      decoration:
+                          fieldDecoration(
+                            context,
+                            'Password',
+                            Icons.lock,
+                          ).copyWith(
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _isPasswordVisible

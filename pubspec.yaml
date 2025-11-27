@@ -73,7 +73,6 @@ flutter:
   assets:
     - assets/images/user_avatar.png
     - assets/sounds/ringtone.mp3
-    - assets/images/logo.jpg
     - assets/images/logo.png
 
 

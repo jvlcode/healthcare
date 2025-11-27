@@ -37,36 +37,43 @@ class _ApplicationStep3DocumentUploadScreenState
   }
 
   Future<void> _uploadAndSave() async {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
-    final form = box.get('draft') ?? DoctorApplicationForm();
+    final box = Hive.box('doctor_application');
+    final form = box.get('draft') as Map<String, dynamic>? ?? {};
 
     setState(() => uploading = true);
 
-    List<Map<String, String>> uploadedDocs = [];
     final uploadService = UploadService();
+    final List<Map<String, String>> uploadedDocs = [];
+
     for (final file in selectedFiles) {
-      if (file.path == null) continue;
+      final path = file.path;
+      if (path == null || path.isEmpty) continue;
 
       try {
-        final res = await uploadService.uploadDocument(File(file.path!));
+        final response = await uploadService.uploadDocument(File(path));
+        final fileUrl = response['url'];
+        if (fileUrl == null) continue;
 
-        final fileUrl = res['url'];
-
-        // prepend base URL to make full absolute URL
-        final fullUrl = "${AppUrls.baseUrl}$fileUrl";
-
-        uploadedDocs.add({"name": file.name, "url": fullUrl});
+        uploadedDocs.add({
+          "name": file.name ?? "Document",
+          "url": "${AppUrls.baseUrl}$fileUrl",
+        });
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to upload ${file.name}")),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to upload ${file.name ?? 'file'}")),
+          );
+        }
       }
     }
 
-    form.step3Documents = uploadedDocs;
-    await box.put("draft", form);
+    // Save directly into the map
 
-    setState(() => uploading = false);
+    await box.put("step3Documents", uploadedDocs);
+
+    if (mounted) {
+      setState(() => uploading = false);
+    }
   }
 
   @override

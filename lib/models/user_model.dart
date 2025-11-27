@@ -27,7 +27,7 @@ class User {
         id: json['_id'],
         name: json['name'],
         email: json['email'],
-        phone: json['phone'] ?? "",
+        phone: json['phone'],
         role: json['role'],
         profileImage: json['profileImage'],
         bio: json['bio'],

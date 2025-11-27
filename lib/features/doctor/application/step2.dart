@@ -26,12 +26,13 @@ class _ApplicationStep2ClinicDetailsScreenState
 
   // ✅ Load previously saved values
   void _loadFromHive() {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
-    final form = box.get('draft');
+    final box = Hive.box('doctor_application');
+    final form = box.get('draft') as Map<String, dynamic>?;
 
-    if (form != null && form.step2ClinicInfo != null) {
-      clinicName = form.step2ClinicInfo!['clinicName'] ?? '';
-      clinicAddress = form.step2ClinicInfo!['clinicAddress'] ?? '';
+    if (form != null && form['step2ClinicInfo'] != null) {
+      final clinicInfo = form['step2ClinicInfo'] as Map<String, dynamic>;
+      clinicName = clinicInfo['clinicName'] ?? '';
+      clinicAddress = clinicInfo['clinicAddress'] ?? '';
     }
   }
 
@@ -39,15 +40,14 @@ class _ApplicationStep2ClinicDetailsScreenState
 
   // ✅ Save to Hive in correct backend format
   Future<void> _saveToHive() async {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
-    final form = box.get('draft') ?? DoctorApplicationForm();
+    final box = Hive.box('doctor_application');
 
-    form.step2ClinicInfo = {
+    final step2Data = {
       "clinicName": clinicName,
       "clinicAddress": clinicAddress,
     };
 
-    await box.put("draft", form);
+    await box.put("step2ClinicInfo", step2Data);
   }
 
   @override

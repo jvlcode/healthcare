@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
-import 'package:healthcare/models/doctor_application_form_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
 import 'package:hive/hive.dart';
 
@@ -9,10 +8,9 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
 
   Future<void> _submitApplication(BuildContext context) async {
     final box = Hive.box('doctor_application');
-    final form = box.get('draft');
+    final form = box.get('draft') as Map<String, dynamic>?;
 
     if (form == null) {
-      // print(form?.toJson());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("No application to submit.")),
       );
@@ -21,25 +19,29 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
 
     try {
       final doctorService = DoctorService();
-
+      final personalInfo =
+          box.get('step1PersonalInfo') as Map<String, dynamic>? ?? {};
+      final clinicInfo =
+          box.get('step2ClinicInfo') as Map<String, dynamic>? ?? {};
+      final uploadedFiles = (box.get('step3Documents') as List<dynamic>? ?? [])
+          .cast<Map<String, String>>();
       // Submit application using the service
       final result = await doctorService.submitApplication(
-        personalInfo: form.step1PersonalInfo ?? {},
-        clinicInfo: form.step2ClinicInfo ?? {},
-        documents: form.step3Documents ?? [],
+        personalInfo: personalInfo,
+        clinicInfo: clinicInfo,
+        documents: uploadedFiles,
       );
 
-      print("FORM $result");
-
       if (result['success'] == true) {
-        form.isSubmitted = true;
-        await form.save();
+        // Mark as submitted
+        // Save back to Hive
+        await box.put('isSubmitted', true);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Application Submitted Successfully!")),
         );
 
-        // Redirect to application status screen
+        // Redirect to doctor home
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.doctorHome,
@@ -63,11 +65,13 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
-    final form = box.get('draft');
-    final personalInfo = form?.step1PersonalInfo ?? {};
-    final clinicInfo = form?.step2ClinicInfo ?? {};
-    final uploadedFiles = form?.step3Documents ?? [];
+    final box = Hive.box('doctor_application');
+    final personalInfo =
+        box.get('step1PersonalInfo') as Map<String, dynamic>? ?? {};
+    final clinicInfo =
+        box.get('step2ClinicInfo') as Map<String, dynamic>? ?? {};
+    final uploadedFiles = (box.get('step3Documents') as List<dynamic>? ?? [])
+        .cast<Map<String, String>>();
 
     return Scaffold(
       appBar: AppBar(
@@ -112,9 +116,9 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
 
             // Clinic Info Card
+            const SizedBox(height: 20),
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
@@ -142,10 +146,10 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
 
             // Uploaded Files Card
-            if (uploadedFiles.isNotEmpty)
+            if (uploadedFiles.isNotEmpty) ...[
+              const SizedBox(height: 20),
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -164,28 +168,27 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      ...uploadedFiles
-                          .map(
-                            (file) => Row(
-                              children: [
-                                const Icon(Icons.insert_drive_file),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    file['name'] ?? '',
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                      ...uploadedFiles.map(
+                        (file) => Row(
+                          children: [
+                            const Icon(Icons.insert_drive_file),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                file['name'] ?? '',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          )
-                          .toList(),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            const SizedBox(height: 40),
+            ],
 
+            const SizedBox(height: 40),
             // Back & Submit buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

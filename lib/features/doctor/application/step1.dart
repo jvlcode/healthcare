@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/models/user_model.dart';
 import 'package:hive/hive.dart';
 import 'package:healthcare/models/doctor_application_form_model.dart';
 
@@ -15,34 +17,53 @@ class _ApplicationStep1PersonalInfoScreenState
     extends State<ApplicationStep1PersonalInfoScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String fullName = '';
-  String email = '';
-  String phone = '';
-  String qualification = '';
-  String specialization = '';
-  String experienceYears = '';
+  User? user;
+
+  // ADDED CONTROLLERS
+  final TextEditingController fullNameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController qualificationController = TextEditingController();
+  final TextEditingController specializationController =
+      TextEditingController();
+  final TextEditingController experienceController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    getUser();
+  }
+
+  Future<void> getUser() async {
+    final currentUser = await SessionManager.getCurrentUser();
+    if (mounted && currentUser != null) {
+      setState(() {
+        user = currentUser;
+        fullNameController.text = currentUser.name ?? "";
+        emailController.text = currentUser.email ?? "";
+        phoneController.text = currentUser.phone ?? "";
+      });
+    }
+  }
 
   bool get isFormFilled =>
-      fullName.isNotEmpty && email.isNotEmpty && phone.isNotEmpty;
+      fullNameController.text.isNotEmpty &&
+      emailController.text.isNotEmpty &&
+      phoneController.text.isNotEmpty;
 
   Future<void> _saveToHive() async {
-    final box = Hive.box<DoctorApplicationForm>('doctor_application');
-    final form = box.get('draft') ?? DoctorApplicationForm();
+    final box = Hive.box('doctor_application');
 
-    form.step1PersonalInfo = {
-      'fullName': fullName,
-      'email': email,
-      'phone': phone,
-
-      // backend-required fields
-      'qualifications': qualification,
-      'specialization': specialization,
-
-      // FIXED → convert to number
-      'experienceYears': int.tryParse(experienceYears) ?? 0,
+    final Map<String, dynamic> step1Data = {
+      'fullName': fullNameController.text,
+      'email': emailController.text,
+      'phone': phoneController.text,
+      'qualifications': qualificationController.text,
+      'specialization': specializationController.text,
+      'experienceYears': int.tryParse(experienceController.text) ?? 0,
     };
 
-    await box.put('draft', form);
+    await box.put('step1PersonalInfo', step1Data);
   }
 
   @override
@@ -68,7 +89,6 @@ class _ApplicationStep1PersonalInfoScreenState
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 30),
 
               // FULL NAME
@@ -80,13 +100,13 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: fullNameController,
                     decoration: const InputDecoration(
                       labelText: "Full Name",
                       hintText: "John Doe",
                       icon: Icon(Icons.person),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => fullName = val),
                     validator: (val) =>
                         val!.isEmpty ? "Please enter your name" : null,
                   ),
@@ -103,13 +123,13 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: emailController,
                     decoration: const InputDecoration(
                       labelText: "Email",
                       hintText: "example@mail.com",
                       icon: Icon(Icons.email),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => email = val),
                     validator: (val) {
                       if (val == null || val.isEmpty) {
                         return "Please enter your email";
@@ -126,7 +146,7 @@ class _ApplicationStep1PersonalInfoScreenState
               ),
               const SizedBox(height: 20),
 
-              // PHONE — FIXED 10 digits validation
+              // PHONE
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -135,6 +155,7 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: phoneController,
                     keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                       labelText: "Phone Number",
@@ -142,7 +163,6 @@ class _ApplicationStep1PersonalInfoScreenState
                       icon: Icon(Icons.phone),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => phone = val.trim()),
                     validator: (val) {
                       if (val == null || val.isEmpty) {
                         return "Please enter phone number";
@@ -169,12 +189,12 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: qualificationController,
                     decoration: const InputDecoration(
                       labelText: "Qualification (MBBS, MD...)",
                       icon: Icon(Icons.school),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => qualification = val),
                   ),
                 ),
               ),
@@ -189,18 +209,18 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: specializationController,
                     decoration: const InputDecoration(
                       labelText: "Specialization",
                       icon: Icon(Icons.medical_services),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => specialization = val),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // EXPERIENCE — FIXED: MUST BE NUMBER
+              // EXPERIENCE
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -209,13 +229,13 @@ class _ApplicationStep1PersonalInfoScreenState
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
+                    controller: experienceController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: "Years of Experience",
                       icon: Icon(Icons.timeline),
                       border: InputBorder.none,
                     ),
-                    onChanged: (val) => setState(() => experienceYears = val),
                     validator: (val) {
                       if (val == null || val.isEmpty) return null;
                       if (int.tryParse(val) == null) {
