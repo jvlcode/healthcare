@@ -118,6 +118,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           final refresh = data['refreshToken']?.toString() ?? '';
           final json = data['user'];
           final registeredUser = User.fromJson(json);
+          print("json $json");
+          print("registeredUser $registeredUser");
 
           // Save securely
           SessionManager.saveSession(json, token, refresh);

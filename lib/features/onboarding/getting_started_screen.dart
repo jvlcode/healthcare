@@ -72,8 +72,10 @@ class GettingStartedScreen extends StatelessWidget {
                     width: 200,
                     child: GFButton(
                       onPressed: () {
-                        SessionManager.setFirstLogin();
-                        navigateSlideLeft(context, routeName: "/register");
+                        navigateSlideLeft(
+                          context,
+                          routeName: "/language-selection",
+                        );
                       },
                       text: 'Get Started',
                       color: theme.colorScheme.secondary,

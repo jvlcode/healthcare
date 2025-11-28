@@ -1,23 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/core/layout/app_header.dart';
 
 class FAQScreen extends StatelessWidget {
   const FAQScreen({super.key});
 
+  final List<Map<String, String>> faqData = const [
+    {
+      'question': 'How do I reschedule?',
+      'answer':
+          'You can reschedule your session by going to your appointments and selecting "Reschedule".',
+    },
+    {
+      'question': 'What if I miss my session?',
+      'answer':
+          'If you miss your session, you can reschedule it through the contact support option for assistance.',
+    },
+    {
+      'question': 'Promotional emails',
+      'answer':
+          'You can manage promotional emails in your account settings under Notifications.',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBEFEA), // light peach background
-
+      backgroundColor: const Color(0xFFFBEFEA),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: ListView(
           children: [
+            const SizedBox(height: 10),
             const Text(
               'FAQ',
               style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
@@ -28,84 +45,44 @@ class FAQScreen extends StatelessWidget {
             ),
             const SizedBox(height: 25),
 
-            // Question 1
-            _faqItem('How do I reschedule?'),
-
-            // Question 2
-            _faqItem('What if I miss my session?'),
-
-            // Question 3
-            _faqItem('Promotional emails'),
-
+            // FAQ Cards
+            ...faqData.map((item) => _faqItem(item)).toList(),
             const SizedBox(height: 20),
-
-            const Text(
-              'If you miss your session, you can reschedule it through a pop of contact present for further assistance.',
-              style: TextStyle(
-                fontSize: 15,
-                color: Colors.black87,
-                height: 1.5,
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  // Helper widget for each FAQ item
-  Widget _faqItem(String question) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            question,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          trailing: const Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Colors.black54,
-          ),
-          onTap: () {},
+  Widget _faqItem(Map<String, String> item) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 15),
+      child: ExpansionTile(
+        title: Text(
+          item['question']!,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        const Divider(thickness: 0.8),
-      ],
-    );
-  }
-}
-
-// Bottom navigation icon (for demo visual)
-class _BottomIcon extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool active;
-  const _BottomIcon({
-    required this.label,
-    required this.icon,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: active ? Colors.orangeAccent : Colors.white,
-          size: 22,
+        childrenPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.orangeAccent : Colors.white,
-            fontSize: 12,
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item['answer']!,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.black87,
+              height: 1.5,
+            ),
           ),
-        ),
-      ],
+        ],
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        iconColor: Colors.orangeAccent,
+        collapsedIconColor: Colors.black54,
+      ),
     );
   }
 }

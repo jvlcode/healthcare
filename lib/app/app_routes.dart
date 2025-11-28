@@ -16,6 +16,7 @@ import 'package:healthcare/features/doctor/application/step2.dart';
 import 'package:healthcare/features/doctor/application/step3.dart';
 import 'package:healthcare/features/doctor/application/step4.dart';
 import 'package:healthcare/features/onboarding/getting_started_screen.dart';
+import 'package:healthcare/features/onboarding/language_selection.dart';
 
 // User
 import 'package:healthcare/features/user/user_home_screen.dart';
@@ -51,6 +52,7 @@ class AppRoutes {
   static const doctorApplyStatus = '/doctor/apply/status';
   static const doctorSlot = '/doctor/slot';
   static const doctorWrapper = '/doctor';
+  static const languageSelection = '/language-selection';
 
   static final routes = <String, WidgetBuilder>{
     // Auth
@@ -61,6 +63,7 @@ class AppRoutes {
 
     //OnBoarding
     gettingStarted: (context) => GettingStartedScreen(),
+    languageSelection: (context) => LanguageSelectionScreen(),
 
     // User
     userHome: (context) => UserHomeScreen(),

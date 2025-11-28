@@ -83,7 +83,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 60),
-              const CircleAvatar(radius: 50),
+              CircleAvatar(
+                radius: 80, // increase from 50 to 60 or higher
+                backgroundColor: Colors.white,
+                child: ClipOval(
+                  child: Image.asset(
+                    "assets/images/logo.png",
+                    fit: BoxFit.contain,
+                    width: 160, // increase width
+                    height: 160, // increase height
+                  ),
+                ),
+              ),
               const SizedBox(height: 40),
               TextFormField(
                 controller: _emailController,
@@ -106,7 +117,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         "Send Reset Link",
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
               ),
             ],
