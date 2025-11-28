@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/layout/app_drawer.dart';
 import 'package:healthcare/core/layout/app_header.dart';
 import 'package:healthcare/features/doctor/application/application_status_screen.dart';
 import 'package:healthcare/features/doctor/doctor_appointments_screen.dart';
 import 'package:healthcare/features/doctor/slot_management_screen.dart';
-import 'package:healthcare/features/user/faq_screen.dart';
+import 'package:healthcare/features/user/faq_screen.dart' show FAQScreen;
 import 'package:healthcare/services/doctor_service.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
@@ -30,13 +31,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Future<void> _initDoctorHome() async {
-    final doctorService = DoctorService();
+    /// 1️⃣ - If doctor already approved previously → show full home
+    final isApproved = await SessionManager.isDoctorApproved();
 
-    final res = await doctorService.getApplicationStatus();
+    if (isApproved) {
+      _buildUI(isPending: false);
+      return;
+    }
+
+    /// 2️⃣ - Doctor not approved yet → check application status
+    final res = await DoctorService().getApplicationStatus();
     if (!mounted) return;
 
     final status = res['success'] == true ? res['data']['status'] : "approved";
 
+    /// 3️⃣ - Not started → force start application
     if (status == "not_started") {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(context, AppRoutes.doctorApply);
@@ -44,9 +53,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       return;
     }
 
-    setState(() {
-      _isPending = status == "pending" || status == "rejected";
+    /// 4️⃣ - Approved → save approval status permanently
+    if (status == "approved") {
+      await SessionManager.setDoctorApproved(true);
+      _buildUI(isPending: false);
+      return;
+    }
 
+    /// 5️⃣ - Pending / Rejected → show AppStatusScreen only
+    final isPending = status == "pending" || status == "rejected";
+    _buildUI(isPending: isPending);
+  }
+
+  void _buildUI({required bool isPending}) {
+    setState(() {
+      _isPending = isPending;
       _screens = [];
       _navItems = [];
 
@@ -54,11 +75,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         _screens.add(const ApplicationStatusScreen());
         _navItems.add(
           const BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_outlined),
-            label: 'App Status',
+            icon: Icon(Icons.info_outline),
+            label: "App Status",
           ),
         );
-        _currentIndex = 0; // start on App Status tab
+        _currentIndex = 0;
       }
 
       _screens.addAll([
@@ -85,8 +106,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -95,32 +114,29 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       onWillPop: () async {
         if (_currentIndex != 0) {
           setState(() => _currentIndex = 0);
-          return false; // prevent exiting
+          return false;
         }
-        return true; // allow exit
+        return true;
       },
       child: Scaffold(
         appBar: const AppHeader(subtitle: "Your patient care dashboard"),
         drawer: const AppDrawer(),
         body: IndexedStack(index: _currentIndex, children: _screens),
-        bottomNavigationBar: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: theme.colorScheme.secondary,
-            unselectedItemColor: Colors.white70,
-            backgroundColor: theme.colorScheme.primary,
-            onTap: _isPending
-                ? null // prevent switching if pending
-                : (index) {
-                    setState(() => _currentIndex = index);
-                  },
-            items: _navItems,
-          ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Theme.of(context).primaryColor,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+
+          /// ❗ Disable navigation if pending
+          onTap: _isPending
+              ? null
+              : (i) {
+                  setState(() => _currentIndex = i);
+                },
+
+          items: _navItems,
         ),
       ),
     );

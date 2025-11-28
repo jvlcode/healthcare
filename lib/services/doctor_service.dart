@@ -41,4 +41,8 @@ class DoctorService {
   Future<Map<String, dynamic>> getApplicationStatus() async {
     return await _apiClient.get("doctors/application/status", useAuth: true);
   }
+
+  Future<Map<String, dynamic>> approveDoctor(String userId) async {
+    return await _apiClient.patch("doctors/$userId/approve");
+  }
 }

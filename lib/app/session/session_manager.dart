@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:hive/hive.dart';
@@ -15,6 +16,7 @@ class SessionManager {
   /// Check if this is the first login / first app launch
   static Future<bool> isFirstLogin() async {
     final value = await _secureStorage.read(key: _firstLoginKey);
+    print(" isFirstLogin $value");
     if (value == null) {
       // First time, mark as true by default
       await _secureStorage.write(key: _firstLoginKey, value: 'true');
@@ -24,8 +26,13 @@ class SessionManager {
   }
 
   /// Mark first login as completed
-  static Future<void> setFirstLogin({String value = 'false'}) async {
-    await _secureStorage.write(key: _firstLoginKey, value: value);
+  static Future<void> setFirstLoginCompleted() async {
+    await _secureStorage.write(key: _firstLoginKey, value: 'false');
+  }
+
+  /// Mark first login as completed
+  static Future<void> setFirstLoginReset() async {
+    await _secureStorage.write(key: _firstLoginKey, value: 'true');
   }
 
   /// Initialize session: validate token if server reachable
@@ -123,10 +130,49 @@ class SessionManager {
     return null;
   }
 
+  /// Get current userId from Hive
+  static Future<String?> getUserId() async {
+    final user = await getCurrentUser();
+    if (user != null) {
+      return user.id;
+    }
+    return null;
+  }
+
+  /// Get doctorId from Hive (if user has a doctor profile)
+  static Future<String?> getDoctorId() async {
+    final user = await getCurrentUser();
+    print(user?.toJson());
+    if (user != null && user.doctor != null) {
+      return user.doctor!.id; // assuming Doctor model has an `id` field
+    }
+    return null;
+  }
+
   /// Update user in Hive
   static Future<void> updateUser(User updatedUser) async {
     final userBox = await Hive.openBox('userBox');
     await userBox.put('user', updatedUser.toJson());
+  }
+
+  /// Update only the doctor field of the stored user
+  static Future<void> updateDoctor(Doctor updatedDoctor) async {
+    final userBox = await Hive.openBox('userBox');
+
+    final storedUserMap = userBox.get('user') as Map<String, dynamic>?;
+
+    if (storedUserMap != null) {
+      // Create a User object from stored data
+      final user = User.fromJson(storedUserMap);
+
+      // Update only the doctor field
+      user.doctor = updatedDoctor;
+
+      // Save back to Hive
+      await userBox.put('user', user.toJson());
+    } else {
+      print('No user found in Hive to update doctor.');
+    }
   }
 
   /// Refresh access token
@@ -163,5 +209,16 @@ class SessionManager {
   }) async {
     await _secureStorage.write(key: 'access_token', value: accessToken);
     await _secureStorage.write(key: 'refresh_token', value: refreshToken);
+  }
+
+  static const String doctorApprovedKey = "doctorApproved";
+
+  static Future<void> setDoctorApproved(bool value) async {
+    await _secureStorage.write(key: doctorApprovedKey, value: value.toString());
+  }
+
+  static Future<bool> isDoctorApproved() async {
+    final value = await _secureStorage.read(key: doctorApprovedKey);
+    return value == "true";
   }
 }

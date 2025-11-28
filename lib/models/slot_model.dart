@@ -79,4 +79,16 @@ class Slot {
       available: available,
     );
   }
+
+  /// Convert Slot to JSON
+  Map<String, dynamic> toJson() => {
+    "_id": id,
+    "date": date.toIso8601String(),
+    "startTime": startTime,
+    "endTime": endTime,
+    "dateLabel": dateLabel,
+    "startTimeLabel": startTimeLabel,
+    "endTimeLabel": endTimeLabel,
+    "available": available,
+  };
 }

@@ -17,4 +17,12 @@ class Review {
     patient: json["patient"],
     createdAt: DateTime.parse(json["createdAt"]),
   );
+
+  /// Convert Review to JSON
+  Map<String, dynamic> toJson() => {
+    "rating": rating,
+    "comment": comment,
+    "patient": patient,
+    "createdAt": createdAt.toIso8601String(),
+  };
 }

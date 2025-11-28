@@ -8,7 +8,7 @@ class User {
   final String role;
   final String? profileImage;
   final String? bio;
-  final Doctor? doctor; // optional
+  Doctor? doctor; // optional
 
   User({
     required this.id,
@@ -40,6 +40,19 @@ class User {
       rethrow;
     }
   }
+  User copyWith({Doctor? doctor}) {
+    return User(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      role: role,
+      profileImage: profileImage,
+      bio: bio,
+      doctor: doctor ?? this.doctor,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     '_id': id,
     'name': name,
@@ -48,6 +61,6 @@ class User {
     'role': role,
     'profileImage': profileImage,
     'bio': bio,
-    'doctor': doctor,
+    'doctor': doctor?.toJson(),
   };
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:hive/hive.dart';
-import 'package:healthcare/models/doctor_application_form_model.dart';
 
 class ApplicationStep2ClinicDetailsScreen extends StatefulWidget {
   const ApplicationStep2ClinicDetailsScreen({super.key});
@@ -18,36 +17,35 @@ class _ApplicationStep2ClinicDetailsScreenState
   String clinicName = '';
   String clinicAddress = '';
 
+  bool showValidationErrors = false; // 👈 SAME PATTERN AS STEP-1
+
   @override
   void initState() {
     super.initState();
     _loadFromHive();
   }
 
-  // ✅ Load previously saved values
+  // Load saved draft data
   void _loadFromHive() {
     final box = Hive.box('doctor_application');
-    final form = box.get('draft') as Map<String, dynamic>?;
+    final info = box.get('step2ClinicInfo') as Map<dynamic, dynamic>?;
 
-    if (form != null && form['step2ClinicInfo'] != null) {
-      final clinicInfo = form['step2ClinicInfo'] as Map<String, dynamic>;
-      clinicName = clinicInfo['clinicName'] ?? '';
-      clinicAddress = clinicInfo['clinicAddress'] ?? '';
+    if (info != null) {
+      clinicName = info['clinicName'] ?? '';
+      clinicAddress = info['clinicAddress'] ?? '';
     }
   }
 
   bool get isFormFilled => clinicName.isNotEmpty && clinicAddress.isNotEmpty;
 
-  // ✅ Save to Hive in correct backend format
+  // Save nested draft object (same as Step-1)
   Future<void> _saveToHive() async {
     final box = Hive.box('doctor_application');
 
-    final step2Data = {
+    await box.put('step2ClinicInfo', {
       "clinicName": clinicName,
       "clinicAddress": clinicAddress,
-    };
-
-    await box.put("step2ClinicInfo", step2Data);
+    });
   }
 
   @override
@@ -62,6 +60,9 @@ class _ApplicationStep2ClinicDetailsScreenState
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
+          autovalidateMode: showValidationErrors
+              ? AutovalidateMode.onUserInteraction
+              : AutovalidateMode.disabled,
           child: Column(
             children: [
               const Text(
@@ -75,7 +76,7 @@ class _ApplicationStep2ClinicDetailsScreenState
               ),
               const SizedBox(height: 30),
 
-              // CLINIC NAME FIELD – SAME STYLE AS STEP 1
+              // ---------------------- CLINIC NAME ----------------------
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -92,13 +93,13 @@ class _ApplicationStep2ClinicDetailsScreenState
                     ),
                     onChanged: (val) => setState(() => clinicName = val),
                     validator: (val) =>
-                        val!.isEmpty ? "Please enter clinic name" : null,
+                        val == null || val.isEmpty ? "Enter clinic name" : null,
                   ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // CLINIC ADDRESS FIELD – SAME STYLE UI
+              // ---------------------- CLINIC ADDRESS ----------------------
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -114,16 +115,16 @@ class _ApplicationStep2ClinicDetailsScreenState
                       border: InputBorder.none,
                     ),
                     onChanged: (val) => setState(() => clinicAddress = val),
-                    validator: (val) =>
-                        val!.isEmpty ? "Please enter clinic address" : null,
+                    validator: (val) => val == null || val.isEmpty
+                        ? "Enter clinic address"
+                        : null,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
 
               const SizedBox(height: 40),
 
-              // NEXT BUTTON (EXACT SAME STYLE AS STEP 1)
+              // ---------------------- NEXT BUTTON ----------------------
               if (isFormFilled)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -137,6 +138,8 @@ class _ApplicationStep2ClinicDetailsScreenState
                     ),
                   ),
                   onPressed: () async {
+                    setState(() => showValidationErrors = true);
+
                     if (_formKey.currentState!.validate()) {
                       await _saveToHive();
                       Navigator.pushNamed(

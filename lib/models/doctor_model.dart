@@ -1,5 +1,3 @@
-// models/doctor_model.dart
-
 import 'package:healthcare/models/review_model.dart';
 import 'package:healthcare/models/slot_model.dart';
 import 'package:healthcare/models/user_model.dart';
@@ -8,7 +6,7 @@ class Doctor {
   final String id;
   final String name;
   final String specialization;
-  final String profileImage; // from user.profileImageUrl
+  final String profileImage;
   final double averageRating;
   final List<Slot> slots;
   final bool approved;
@@ -37,10 +35,7 @@ class Doctor {
       id: json["_id"] ?? "",
       name: json["application"]?["personalInfo"]?["fullName"] ?? "",
       specialization: json["specialization"] ?? "",
-      profileImage:
-          json["user"]?["profileImage"] ??
-          json["profileImage"] ??
-          "", // fallback to user or root
+      profileImage: json["user"]?["profileImage"] ?? json["profileImage"] ?? "",
       averageRating: (json["averageRating"] ?? 0).toDouble(),
       application: Application.fromJson(json["application"] ?? {}),
       slots: (json["slots"] is List)
@@ -53,6 +48,7 @@ class Doctor {
                 .toList()
           : [],
       approved: json["approved"] ?? false,
+      user: json["user"] != null ? User.fromJson(json["user"]) : null,
     );
   }
 
@@ -94,7 +90,7 @@ class Doctor {
       name: personalInfo['fullName'] ?? userJson['name'] ?? '',
       specialization: doctorJson['specialization'] ?? '',
       profileImage: userJson['profileImage'] ?? '',
-      averageRating: 0.0, // not present in login response
+      averageRating: 0.0,
       approved: doctorJson['approved'] ?? false,
       bio: doctorJson['bio'] ?? '',
       slots: [],
@@ -125,6 +121,20 @@ class Doctor {
       ),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    "_id": id,
+    "name": name,
+    "specialization": specialization,
+    "profileImage": profileImage,
+    "averageRating": averageRating,
+    "approved": approved,
+    "bio": bio,
+    "slots": slots.map((s) => s.toJson()).toList(),
+    "recentReviews": recentReviews.map((r) => r.toJson()).toList(),
+    "application": application.toJson(),
+    "user": user?.toJson(),
+  };
 }
 
 class Application {
@@ -149,6 +159,12 @@ class Application {
           : [],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    "personalInfo": personalInfo.toJson(),
+    "clinicInfo": clinicInfo.toJson(),
+    "documents": documents.map((d) => d.toJson()).toList(),
+  };
 }
 
 class PersonalInfo {
@@ -175,6 +191,14 @@ class PersonalInfo {
       experienceYears: json['experienceYears'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    "fullName": fullName,
+    "email": email,
+    "phone": phone,
+    "qualifications": qualifications,
+    "experienceYears": experienceYears,
+  };
 }
 
 class ClinicInfo {
@@ -189,6 +213,11 @@ class ClinicInfo {
       clinicAddress: json['clinicAddress'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    "clinicName": clinicName,
+    "clinicAddress": clinicAddress,
+  };
 }
 
 class DocumentModel {
@@ -200,6 +229,8 @@ class DocumentModel {
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
     return DocumentModel(name: json["name"] ?? '', url: json["url"] ?? '');
   }
+
+  Map<String, dynamic> toJson() => {"name": name, "url": url};
 }
 
 class DoctorStatus {
@@ -214,4 +245,9 @@ class DoctorStatus {
       approved: json['approved'] ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    "hasApplied": hasApplied,
+    "approved": approved,
+  };
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthcare/app/app_routes.dart';
+import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/models/doctor_model.dart';
 import 'package:healthcare/services/doctor_service.dart';
 import 'package:hive/hive.dart';
 
@@ -8,14 +10,6 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
 
   Future<void> _submitApplication(BuildContext context) async {
     final box = Hive.box('doctor_application');
-    final form = box.get('draft') as Map<String, dynamic>?;
-
-    if (form == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No application to submit.")),
-      );
-      return;
-    }
 
     try {
       final doctorService = DoctorService();
@@ -25,7 +19,8 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
           box.get('step2ClinicInfo') as Map<String, dynamic>? ?? {};
       final uploadedFiles = (box.get('step3Documents') as List<dynamic>? ?? [])
           .cast<Map<String, String>>();
-      // Submit application using the service
+
+      // Call API
       final result = await doctorService.submitApplication(
         personalInfo: personalInfo,
         clinicInfo: clinicInfo,
@@ -33,15 +28,32 @@ class ApplicationStep4ReviewSubmitScreen extends StatelessWidget {
       );
 
       if (result['success'] == true) {
-        // Mark as submitted
-        // Save back to Hive
-        await box.put('isSubmitted', true);
+        final data = result['data'];
+
+        /// 1️⃣ Set approval flag FALSE (very important)
+        await SessionManager.setDoctorApproved(false);
+
+        /// 2️⃣ Store doctor data inside user session
+        try {
+          final updatedDoctor = Doctor.fromJson(data['doctor']);
+          final currentUser = await SessionManager.getCurrentUser();
+          if (currentUser != null) {
+            final updatedUser = currentUser.copyWith(doctor: updatedDoctor);
+            await SessionManager.updateUser(updatedUser);
+          }
+        } catch (e, stack) {
+          print("Error updating user $e");
+          print(stack);
+        }
+
+        /// 3️⃣ Clear all saved application form data
+        await box.clear();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Application Submitted Successfully!")),
         );
 
-        // Redirect to doctor home
+        /// 4️⃣ Redirect to doctor home
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.doctorHome,

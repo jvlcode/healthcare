@@ -3,7 +3,6 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/core/constants/urls.dart';
-import 'package:healthcare/models/doctor_application_form_model.dart';
 import 'package:healthcare/services/upload_service.dart';
 import 'package:hive/hive.dart';
 
@@ -19,6 +18,8 @@ class _ApplicationStep3DocumentUploadScreenState
     extends State<ApplicationStep3DocumentUploadScreen> {
   List<PlatformFile> selectedFiles = [];
   bool uploading = false;
+
+  bool showValidationErrors = false; // 👈 SAME AS STEP-1 & STEP-2
 
   bool get isFileSelected => selectedFiles.isNotEmpty;
 
@@ -38,7 +39,6 @@ class _ApplicationStep3DocumentUploadScreenState
 
   Future<void> _uploadAndSave() async {
     final box = Hive.box('doctor_application');
-    final form = box.get('draft') as Map<String, dynamic>? ?? {};
 
     setState(() => uploading = true);
 
@@ -55,25 +55,21 @@ class _ApplicationStep3DocumentUploadScreenState
         if (fileUrl == null) continue;
 
         uploadedDocs.add({
-          "name": file.name ?? "Document",
+          "name": file.name,
           "url": "${AppUrls.baseUrl}$fileUrl",
         });
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed to upload ${file.name ?? 'file'}")),
+            SnackBar(content: Text("Failed to upload ${file.name}")),
           );
         }
       }
     }
 
-    // Save directly into the map
-
     await box.put("step3Documents", uploadedDocs);
 
-    if (mounted) {
-      setState(() => uploading = false);
-    }
+    if (mounted) setState(() => uploading = false);
   }
 
   @override
@@ -90,20 +86,23 @@ class _ApplicationStep3DocumentUploadScreenState
           SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Upload your certificates & ID proof",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                const Center(
+                  child: Text(
+                    "Upload your certificates & ID proof",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
 
                 const SizedBox(height: 30),
 
-                // PICK FILE BUTTON (same UI)
+                // FILE PICKER BUTTON
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -134,9 +133,19 @@ class _ApplicationStep3DocumentUploadScreenState
                   ),
                 ),
 
+                // ❗ VALIDATION ERROR (same style as previous steps)
+                if (showValidationErrors && !isFileSelected)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12, top: 6),
+                    child: Text(
+                      "Please upload at least one document",
+                      style: TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ),
+
                 const SizedBox(height: 20),
 
-                // SELECTED FILE LIST (same UI)
+                // FILE LIST UI
                 if (selectedFiles.isNotEmpty)
                   Card(
                     elevation: 2,
@@ -175,7 +184,7 @@ class _ApplicationStep3DocumentUploadScreenState
 
                 const SizedBox(height: 40),
 
-                // BUTTONS — same UI
+                // BACK + NEXT BUTTONS
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -206,7 +215,14 @@ class _ApplicationStep3DocumentUploadScreenState
                           ),
                         ),
                         onPressed: () async {
+                          // ENABLE VALIDATION ONCE NEXT IS PRESSED
+                          setState(() => showValidationErrors = true);
+
+                          if (!isFileSelected) return;
+
                           await _uploadAndSave();
+                          if (!mounted) return;
+
                           Navigator.pushNamed(
                             context,
                             AppRoutes.doctorApplyReview,
@@ -227,7 +243,7 @@ class _ApplicationStep3DocumentUploadScreenState
             ),
           ),
 
-          // Upload loading overlay
+          // OVERLAY LOADER
           if (uploading)
             Container(
               color: Colors.black26,

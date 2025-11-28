@@ -42,6 +42,7 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
       // ---------------------------
       await _initHive();
       // await SessionManager.setFirstLogin(value: 'true');
+      // await SessionManager.setFirstLoginReset();
       isFirstLogin = await SessionManager.isFirstLogin();
 
       // ---------------------------
