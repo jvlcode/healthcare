@@ -43,8 +43,6 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
       await _initHive();
       // await SessionManager.setFirstLogin(value: 'true');
       // await SessionManager.setFirstLoginReset();
-      isFirstLogin = await SessionManager.isFirstLogin();
-
       // ---------------------------
       // 2. Server Reachability
       // ---------------------------
@@ -70,6 +68,9 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
       if (user != null) {
         SocketService().init();
       } else {
+        // No logged-in user
+        final firstLoginCheck = await SessionManager.isFirstLogin();
+        isFirstLogin = firstLoginCheck;
         if (SessionManager.sessionInvalid) {
           ToastUtil.error(
             "Session Invalid...Please Login",
