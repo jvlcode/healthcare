@@ -1,8 +1,9 @@
+import 'package:intl/intl.dart';
+
 class Slot {
   String id;
-  DateTime date;
-  String startTime;
-  String endTime;
+  DateTime startAt;
+  DateTime endAt;
   String dateLabel;
   String startTimeLabel;
   String endTimeLabel;
@@ -10,85 +11,44 @@ class Slot {
 
   Slot({
     required this.id,
-    required this.date,
-    required this.startTime,
-    required this.endTime,
+    required this.startAt,
+    required this.endAt,
     required this.dateLabel,
     required this.startTimeLabel,
     required this.endTimeLabel,
     required this.available,
   });
 
-  DateTime get startDateTime {
-    // assuming slot.date is in "YYYY-MM-DD"
-
-    // startTime is like "13:00"
-    final parts = startTime.split(":");
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
-  DateTime get endDateTime {
-    // assuming slot.date is in "YYYY-MM-DD"
-    final date = DateTime.parse(endTime);
-
-    // startTime is like "13:00"
-    final parts = endTime.split(":");
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
   factory Slot.fromJson(Map<String, dynamic> json) {
-    try {
-      return Slot(
-        id: json["_id"] ?? json["id"], // support both _id and id
-        date: DateTime.parse(json["date"]),
-        startTime: json["startTime"],
-        endTime: json["endTime"],
-        dateLabel: json["dateLabel"],
-        startTimeLabel: json["startTimeLabel"],
-        endTimeLabel: json["endTimeLabel"],
-        available: json["available"] ?? false,
-      );
-    } catch (e, stack) {
-      print('❌ Failed to parse Slot: $e');
-      print('Stack: $stack');
-      print('Raw JSON: $json');
-      rethrow;
-    }
+    final start = DateTime.parse(json["startAt"]);
+    final end = DateTime.parse(json["endAt"]);
+    return Slot(
+      id: json["_id"] ?? json["id"],
+      startAt: start,
+      endAt: end,
+      dateLabel: DateFormat('d MMM').format(start),
+      startTimeLabel: DateFormat.jm().format(start),
+      endTimeLabel: DateFormat.jm().format(end),
+      available: json["available"] ?? false,
+    );
   }
-  Slot copyWith({
-    String? id,
-    String? startTime,
-    String? endTime,
-    String? startTimeLabel,
-    String? endTimeLabel,
-  }) {
+
+  Slot copyWith({String? id, DateTime? startAt, DateTime? endAt}) {
     return Slot(
       id: id ?? this.id,
-      date: date,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      startTimeLabel: startTimeLabel ?? this.startTimeLabel,
-      endTimeLabel: endTimeLabel ?? this.endTimeLabel,
-      dateLabel: dateLabel,
+      startAt: startAt ?? this.startAt,
+      endAt: endAt ?? this.endAt,
+      dateLabel: DateFormat('d MMM').format(startAt ?? this.startAt),
+      startTimeLabel: DateFormat.jm().format(startAt ?? this.startAt),
+      endTimeLabel: DateFormat.jm().format(endAt ?? this.endAt),
       available: available,
     );
   }
 
-  /// Convert Slot to JSON
   Map<String, dynamic> toJson() => {
     "_id": id,
-    "date": date.toIso8601String(),
-    "startTime": startTime,
-    "endTime": endTime,
-    "dateLabel": dateLabel,
-    "startTimeLabel": startTimeLabel,
-    "endTimeLabel": endTimeLabel,
+    "startAt": startAt.toIso8601String(),
+    "endAt": endAt.toIso8601String(),
     "available": available,
   };
 }
