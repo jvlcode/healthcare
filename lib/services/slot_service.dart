@@ -14,12 +14,10 @@ class SlotService {
   /// CREATE SLOT
   /// -------------------------------
   Future<Map<String, dynamic>> createSlot({
-    required String date, // format: "YYYY-MM-DD"
-    required String startTime, // format: "HH:mm"
-    required String endTime, // format: "HH:mm"
+    required String startAt, // ISO8601 string
+    required String endAt, // ISO8601 string
   }) async {
-    final slotData = {"date": date, "startTime": startTime, "endTime": endTime};
-
+    final slotData = {"startAt": startAt, "endAt": endAt};
     return await _apiClient.post("slots", slotData, useAuth: true);
   }
 
@@ -27,12 +25,11 @@ class SlotService {
   /// UPDATE SLOT
   /// -------------------------------
   Future<Map<String, dynamic>> updateSlot({
-    required slotId,
-    required String date, // format: "YYYY-MM-DD"
-    required String startTime, // format: "HH:mm"
-    required String endTime, // format: "HH:mm"
+    required String slotId,
+    required String startAt, // ISO8601 string
+    required String endAt, // ISO8601 string
   }) async {
-    final slotData = {"date": date, "startTime": startTime, "endTime": endTime};
+    final slotData = {"startAt": startAt, "endAt": endAt};
     return await _apiClient.put("slots/$slotId", slotData, useAuth: true);
   }
 

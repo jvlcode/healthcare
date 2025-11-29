@@ -57,9 +57,9 @@ class _DoctorSlotManagementScreenState
           final grouped = <DateTime, List<Slot>>{};
           for (var slot in slots) {
             final date = DateTime(
-              slot.date.year,
-              slot.date.month,
-              slot.date.day,
+              slot.startAt.year,
+              slot.startAt.month,
+              slot.startAt.day,
             );
             grouped.putIfAbsent(date, () => []).add(slot);
           }
@@ -89,11 +89,6 @@ class _DoctorSlotManagementScreenState
   Future<TimeOfDay?> _pickTime(TimeOfDay initial) =>
       showTimePicker(context: context, initialTime: initial);
 
-  String _format24(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  String _format12(TimeOfDay t) => t.format(context);
-
   void _showError(dynamic e) {
     if (!mounted) return;
     setState(() {
@@ -101,6 +96,14 @@ class _DoctorSlotManagementScreenState
       _loading = false;
     });
   }
+
+  int _compareTimes(TimeOfDay a, TimeOfDay b) =>
+      a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute;
+
+  String _format24(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  String _format12(DateTime dt) => DateFormat.jm().format(dt);
 
   Future<void> _addSlot() async {
     final date = await _pickDate();
@@ -117,12 +120,24 @@ class _DoctorSlotManagementScreenState
       return;
     }
 
-    final newStart = _format24(start);
-    final newEnd = _format24(end);
-    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+    final newStart = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      start.hour,
+      start.minute,
+    );
+    final newEnd = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      end.hour,
+      end.minute,
+    );
 
+    // Check for duplicate
     if (slotsByDate[date]?.any(
-          (s) => s.startTime == newStart && s.endTime == newEnd,
+          (s) => s.startAt == newStart && s.endAt == newEnd,
         ) ??
         false) {
       ToastUtil.info("A slot already exists with this time!");
@@ -132,24 +147,20 @@ class _DoctorSlotManagementScreenState
     await NetworkHelper().safeCall(
       context,
       () => service.createSlot(
-        date: formattedDate,
-        startTime: newStart,
-        endTime: newEnd,
+        startAt: newStart.toIso8601String(),
+        endAt: newEnd.toIso8601String(),
       ),
       onSuccess: (res) {
-        final slotId =
-            (res['data'] as Map<String, dynamic>?)?['_id'] ??
-            (res['data'] as Map<String, dynamic>?)?['id'];
+        final slotId = (res['data'] as Map<String, dynamic>?)?['_id'];
         if (slotId == null) return ToastUtil.error("Failed to get slot ID");
 
         final slot = Slot(
           id: slotId,
-          startTime: newStart,
-          endTime: newEnd,
-          startTimeLabel: _format12(start),
-          endTimeLabel: _format12(end),
-          dateLabel: DateFormat('d MMM yyyy').format(date),
-          date: date,
+          startAt: newStart,
+          endAt: newEnd,
+          dateLabel: DateFormat('d MMM yyyy').format(newStart),
+          startTimeLabel: _format12(newStart),
+          endTimeLabel: _format12(newEnd),
           available: true,
         );
 
@@ -167,17 +178,32 @@ class _DoctorSlotManagementScreenState
     final slot = slotsByDate[date]![index];
     if (!slot.available) return ToastUtil.error("Slot already booked!");
 
-    final start = await _pickTime(const TimeOfDay(hour: 9, minute: 0));
+    final start = await _pickTime(TimeOfDay.fromDateTime(slot.startAt));
     if (start == null) return;
-    final end = await _pickTime(TimeOfDay(hour: start.hour + 1, minute: 0));
-    if (end == null || _compareTimes(start, end) >= 0)
+
+    final end = await _pickTime(TimeOfDay.fromDateTime(slot.endAt));
+    if (end == null || _compareTimes(start, end) >= 0) {
       return ToastUtil.error("Invalid time range");
+    }
 
-    final newStart = _format24(start);
-    final newEnd = _format24(end);
+    final newStart = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      start.hour,
+      start.minute,
+    );
+    final newEnd = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      end.hour,
+      end.minute,
+    );
 
+    // Check for duplicate
     if (slotsByDate[date]!.any(
-      (s) => s.id != slot.id && s.startTime == newStart && s.endTime == newEnd,
+      (s) => s.id != slot.id && s.startAt == newStart && s.endAt == newEnd,
     )) {
       return ToastUtil.info("Another slot already exists with this time!");
     }
@@ -186,19 +212,12 @@ class _DoctorSlotManagementScreenState
       context,
       () => service.updateSlot(
         slotId: slot.id,
-        date: DateFormat('yyyy-MM-dd').format(date),
-        startTime: newStart,
-        endTime: newEnd,
+        startAt: newStart.toIso8601String(),
+        endAt: newEnd.toIso8601String(),
       ),
       onSuccess: (_) {
-        setState(
-          () => slotsByDate[date]![index] = slot.copyWith(
-            startTime: newStart,
-            endTime: newEnd,
-            startTimeLabel: _format12(start),
-            endTimeLabel: _format12(end),
-          ),
-        );
+        final updatedSlot = slot.copyWith(startAt: newStart, endAt: newEnd);
+        setState(() => slotsByDate[date]![index] = updatedSlot);
         ToastUtil.success("Slot updated");
       },
       onApiError: (res) => ToastUtil.error(
@@ -221,30 +240,22 @@ class _DoctorSlotManagementScreenState
       confirmColor: Colors.red,
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
+
     await NetworkHelper().safeCall<Map<String, dynamic>>(
       context,
       () => service.deleteSlot(slot.id),
       onSuccess: (res) {
-        if (res['success'] == true) {
-          setState(() {
-            slotsByDate[date]!.removeAt(index);
-            if (slotsByDate[date]!.isEmpty) slotsByDate.remove(date);
-          });
-          ToastUtil.success("Slot deleted");
-        } else {
-          ToastUtil.error("Failed to delete slot");
-        }
+        setState(() {
+          slotsByDate[date]!.removeAt(index);
+          if (slotsByDate[date]!.isEmpty) slotsByDate.remove(date);
+        });
+        ToastUtil.success("Slot deleted");
       },
       onApiError: (_) => ToastUtil.error("Failed to delete slot"),
       onException: (e) => ToastUtil.error("Error: $e"),
     );
   }
-
-  int _compareTimes(TimeOfDay a, TimeOfDay b) =>
-      a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +302,6 @@ class _DoctorSlotManagementScreenState
       itemBuilder: (context, index) {
         final date = sortedDates[index];
         final dateSlots = slotsByDate[date]!;
-        final formattedDate = DateFormat('EEE, MMM d, yyyy').format(date);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -305,7 +315,7 @@ class _DoctorSlotManagementScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  formattedDate,
+                  DateFormat('EEE, MMM d, yyyy').format(date),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

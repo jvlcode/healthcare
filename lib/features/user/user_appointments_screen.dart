@@ -49,7 +49,7 @@ class _UserAppointmentsScreenState extends State<UserAppointmentsScreen> {
   }
 
   bool _isAppointmentExpired(Appointment booking) {
-    return DateTime.now().isAfter(booking.slot.startDateTime);
+    return DateTime.now().isAfter(booking.slot.startAt);
   }
 
   // ---------------------------------------

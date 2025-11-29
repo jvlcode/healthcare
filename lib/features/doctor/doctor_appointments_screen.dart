@@ -67,7 +67,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
   // ===============================
   // 📌 Helpers
   // ===============================
-  bool isExpired(Appointment a) => DateTime.now().isAfter(a.slot.startDateTime);
+  bool isExpired(Appointment a) => DateTime.now().isAfter(a.slot.startAt);
 
   Color statusColor(String status) {
     switch (status.toLowerCase()) {
