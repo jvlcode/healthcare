@@ -18,6 +18,20 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    _phone.addListener(() {
+      if (_otpSent) {
+        setState(() {
+          _otpSent = false;
+          _otp.clear();
+        });
+      }
+    });
+  }
+
   int _step = 0;
 
   final _formKeys = [
@@ -41,13 +55,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
   bool _loading = false;
+  bool _checkingEmail = false;
+  bool _emailExists = false;
 
-  void _nextStep() {
+  void _nextStep() async {
     final form = _formKeys[_step].currentState!;
     if (!form.validate()) return;
 
+    // -------------------------------
+    // STEP 0 → Check EMAIL before going to next step
+    // -------------------------------
+    if (_step == 0) {
+      setState(() => _checkingEmail = true);
+
+      final exists = await AuthService().checkEmailExists(_email.text.trim());
+
+      setState(() => _checkingEmail = false);
+
+      if (exists) {
+        ToastUtil.error("Email already registered");
+        return; // STOP HERE
+      }
+
+      // If email is OK → proceed to phone step
+      setState(() => _step = 1);
+      return;
+    }
+
+    // -------------------------------
+    // STEP 1 → OTP flow
+    // -------------------------------
     if (_step == 1 && !_otpSent) {
-      _sendOtp();
+      _checkPhoneAndSendOtp();
       return;
     }
 
@@ -56,6 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    // -------------------------------
+    // STEP 2 → Final register
+    // -------------------------------
     if (_step < 2) {
       setState(() => _step++);
       return;
@@ -65,7 +107,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _prevStep() {
-    if (_step > 0) setState(() => _step--);
+    if (_step > 0) {
+      setState(() {
+        // If we are leaving step 1 (phone+otp)
+        if (_step == 1) {
+          _otpSent = false;
+          _isVerifying = false;
+          _otp.clear();
+        }
+
+        _step--;
+      });
+    }
+  }
+
+  void _checkPhoneAndSendOtp() async {
+    final phone = _phone.text.trim();
+
+    if (phone.length != 10) {
+      ToastUtil.error("Enter valid 10-digit phone");
+      return;
+    }
+
+    final exists = await AuthService().checkPhoneExists(phone);
+
+    if (exists) {
+      ToastUtil.error("Phone already registered");
+      return; // STOP HERE
+    }
+
+    // Phone valid → send OTP
+    _sendOtp();
   }
 
   void _sendOtp() {
@@ -219,7 +291,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 12),
           if (!_otpSent)
             ElevatedButton.icon(
-              onPressed: _sendOtp,
+              onPressed: _checkPhoneAndSendOtp,
               icon: const Icon(Icons.sms),
               label: const Text("Send OTP"),
             )

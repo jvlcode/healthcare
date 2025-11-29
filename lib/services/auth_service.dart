@@ -75,4 +75,33 @@ class AuthService {
       return false;
     }
   }
+
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      final res = await _apiClient.get(
+        "auth/check-email",
+        queryParams: {"email": email},
+      );
+      final data = res['data'];
+      return data['exists'] == true;
+    } catch (e) {
+      print("checkEmailExists error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> checkPhoneExists(String phone) async {
+    try {
+      final res = await _apiClient.get(
+        "auth/check-phone",
+        queryParams: {"phone": phone},
+      );
+      print("RES $res");
+      final data = res['data'];
+      return data['exists'] == true;
+    } catch (e) {
+      print("checkPhoneExists error: $e");
+      return false;
+    }
+  }
 }
