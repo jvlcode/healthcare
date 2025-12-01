@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/helpers/field_helper.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
-import 'package:healthcare/models/user_model.dart';
+import 'package:healthcare/core/widgets/session_bootstraper.dart';
 import 'package:healthcare/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,25 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final AuthService _authService = AuthService();
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: Colors.grey[100],
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.teal, width: 1.5),
-      ),
-      labelStyle: const TextStyle(fontSize: 15),
-    );
-  }
-
   void _loginUser() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -52,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     // Capture Navigator safely
-    final navigator = Navigator.of(context);
+    // final navigator = Navigator.of(context);
 
     await NetworkHelper().safeCall(
       context,
@@ -82,18 +63,18 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         try {
-          final user = User.fromJson(userJson);
+          // final user = User.fromJson(userJson);
           await SessionManager.saveSession(userJson, accessToken, refreshToken);
 
           if (!mounted) return;
 
           ToastUtil.success("Login successful");
 
-          final route = user.role.toUpperCase() == 'DOCTOR'
-              ? AppRoutes.doctorHome
-              : AppRoutes.userHome;
-
-          navigator.pushReplacementNamed(route);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const SessionBootstrapper()),
+            (route) => false,
+          );
         } catch (e, stack) {
           print("❌ User parsing failed: $e");
           print(stack);

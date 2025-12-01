@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
-
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final String? subtitle;
@@ -22,16 +20,18 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: const Color(0xFF01312F),
       elevation: 0,
       centerTitle: true,
-      automaticallyImplyLeading: showBackButton,
       leading: IconButton(
-        icon: const Icon(Icons.menu, color: Colors.white),
-        onPressed: () {
-          // ✅ Open the drawer safely
-          Scaffold.maybeOf(context)?.openDrawer();
-        },
+        icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+        onPressed: () => Scaffold.maybeOf(context)?.openDrawer(),
+        constraints: const BoxConstraints(
+          minHeight: kToolbarHeight,
+          minWidth: kToolbarHeight,
+        ),
+        padding: EdgeInsets.zero, // ensures full hitbox
       ),
-      actions: actions,
       title: Column(
+        mainAxisAlignment:
+            MainAxisAlignment.center, // ✅ vertically centers text block
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -42,20 +42,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               color: Colors.white,
             ),
           ),
+          if (subtitle != null)
+            Text(
+              subtitle!,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
         ],
       ),
-      bottom: subtitle != null
-          ? PreferredSize(
-              preferredSize: Size.fromHeight(20),
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  subtitle!,
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-            )
-          : null,
+      actions: actions,
     );
   }
 

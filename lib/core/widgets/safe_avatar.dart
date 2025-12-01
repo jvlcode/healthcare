@@ -24,7 +24,9 @@ class _SafeAvatarState extends State<SafeAvatar> {
 
   Future<void> _checkConnectivity() async {
     final result = await Connectivity().checkConnectivity();
+    if (!mounted) return;
     setState(() {
+      // ignore: unrelated_type_equality_checks
       _isOnline = result != ConnectivityResult.none;
     });
   }

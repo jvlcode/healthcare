@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/app_routes.dart';
 import 'package:healthcare/app/session/session_manager.dart';
+import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/utils/toast_util.dart';
 import 'package:healthcare/core/helpers/network_helper.dart';
+import 'package:healthcare/core/widgets/session_bootstraper.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:healthcare/core/helpers/field_helper.dart';
@@ -189,20 +191,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           final token = data['accessToken']?.toString() ?? '';
           final refresh = data['refreshToken']?.toString() ?? '';
           final json = data['user'];
-          final registeredUser = User.fromJson(json);
-          print("json $json");
-          print("registeredUser $registeredUser");
-
           // Save securely
           SessionManager.saveSession(json, token, refresh);
 
           ToastUtil.success("Registration Successful");
 
-          Navigator.pushReplacementNamed(
+          Navigator.pushAndRemoveUntil(
             context,
-            registeredUser.role == "DOCTOR"
-                ? AppRoutes.doctorHome
-                : AppRoutes.userHome,
+            MaterialPageRoute(builder: (_) => const SessionBootstrapper()),
+            (route) => false,
           );
         },
         onApiError: (msg) => ToastUtil.error(msg.toString()),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/core/widgets/session_bootstraper.dart';
 
 // Auth
 import 'package:healthcare/features/auth/login_screen.dart';

@@ -20,8 +20,10 @@ class Slot {
   });
 
   factory Slot.fromJson(Map<String, dynamic> json) {
-    final start = DateTime.parse(json["startAt"]);
-    final end = DateTime.parse(json["endAt"]);
+    final start = DateTime.parse(
+      json["startAt"],
+    ).toLocal(); // <-- add .toLocal()
+    final end = DateTime.parse(json["endAt"]).toLocal(); // <-- add .toLocal()
     return Slot(
       id: json["_id"] ?? json["id"],
       startAt: start,
@@ -34,13 +36,16 @@ class Slot {
   }
 
   Slot copyWith({String? id, DateTime? startAt, DateTime? endAt}) {
+    final s = (startAt ?? this.startAt).toLocal();
+    final e = (endAt ?? this.endAt).toLocal();
+
     return Slot(
       id: id ?? this.id,
       startAt: startAt ?? this.startAt,
       endAt: endAt ?? this.endAt,
-      dateLabel: DateFormat('d MMM').format(startAt ?? this.startAt),
-      startTimeLabel: DateFormat.jm().format(startAt ?? this.startAt),
-      endTimeLabel: DateFormat.jm().format(endAt ?? this.endAt),
+      dateLabel: DateFormat('d MMM').format(s),
+      startTimeLabel: DateFormat.jm().format(s),
+      endTimeLabel: DateFormat.jm().format(e),
       available: available,
     );
   }

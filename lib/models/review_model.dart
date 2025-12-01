@@ -1,20 +1,23 @@
 class Review {
   final int rating;
-  final String patient;
   final String comment;
   final DateTime createdAt;
+  final String patientName;
+  final String patientId;
 
   Review({
     required this.rating,
     required this.comment,
     required this.createdAt,
-    required this.patient,
+    required this.patientName,
+    required this.patientId,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) => Review(
     rating: json["rating"],
     comment: json["comment"],
-    patient: json["patient"],
+    patientName: json["patientName"],
+    patientId: json["patientId"],
     createdAt: DateTime.parse(json["createdAt"]),
   );
 
@@ -22,7 +25,8 @@ class Review {
   Map<String, dynamic> toJson() => {
     "rating": rating,
     "comment": comment,
-    "patient": patient,
+    "patientName": patientName,
+    "patientId": patientId,
     "createdAt": createdAt.toIso8601String(),
   };
 }

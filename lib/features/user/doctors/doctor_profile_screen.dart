@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:healthcare/app/session/session_manager.dart';
 import 'package:healthcare/core/utils/image_util.dart';
 import 'package:healthcare/core/utils/navigation_util.dart';
 import 'package:healthcare/core/widgets/book_session_btn.dart';
 import 'package:healthcare/features/user/booking/booking_screen.dart';
 import 'package:healthcare/models/doctor_model.dart';
+import 'package:healthcare/models/review_model.dart';
+import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/review_service.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
@@ -24,7 +27,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     doctor = widget.doctor;
   }
 
-  void _showRatingModal(int initialRating) {
+  void _showRatingModal(int initialRating, User user) {
     final TextEditingController commentController = TextEditingController();
     int tempRating = initialRating;
 
@@ -67,6 +70,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                       Navigator.pop(context);
                       _showRatingModal(
                         tempRating,
+                        user,
                       ); // reopen with updated rating
                     },
                   );
@@ -87,10 +91,30 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ElevatedButton(
                 onPressed: () async {
                   final comment = commentController.text.trim();
+
+                  if (comment.isEmpty) {
+                    // Show error if comment is empty
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Please enter a comment before submitting.",
+                        ),
+                      ),
+                    );
+                    return; // stop further execution
+                  }
+
                   final reviewService = ReviewService();
+                  final newReview = Review(
+                    patientId: user.id,
+                    patientName: user.name,
+                    rating: tempRating,
+                    comment: comment,
+                    createdAt: DateTime.now(),
+                  );
 
                   final result = await reviewService.submitReview(
-                    doctorId: doctor.id, // assuming doctor.id is available
+                    doctorId: doctor.id,
                     rating: tempRating,
                     comment: comment,
                   );
@@ -100,7 +124,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   if (result['success']) {
                     setState(() {
                       selectedRating = tempRating;
+                      doctor.recentReviews.insert(0, newReview); // add locally
                     });
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Thanks for your review!")),
                     );
@@ -114,6 +140,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                     );
                   }
                 },
+
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: const Color(0xFF002B25),
@@ -257,7 +284,25 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
                 return GestureDetector(
-                  onTap: () => _showRatingModal(index + 1),
+                  onTap: () async {
+                    // check if current user has already submitted a review
+                    final user = await SessionManager.getCurrentUser();
+                    if (user == null) return;
+                    if (doctor.recentReviews.any(
+                      (r) => r.patientId == user.id,
+                    )) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "You have already submitted a review for this doctor.",
+                          ),
+                        ),
+                      );
+                      return; // prevent opening modal
+                    }
+
+                    _showRatingModal(index + 1, user);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Icon(
@@ -278,7 +323,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   children: [
                     // Patient name
                     Text(
-                      review.patient,
+                      review.patientName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,

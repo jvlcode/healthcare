@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:healthcare/app/app.dart';
-import 'package:healthcare/app/app_theme.dart';
 import 'package:healthcare/app/session/reachability_controller.dart';
 import 'package:healthcare/app/session/session_manager.dart';
-import 'package:healthcare/core/utils/toast_util.dart';
+import 'package:healthcare/core/constants/urls.dart';
 import 'package:healthcare/core/widgets/splash_screen.dart';
-import 'package:healthcare/features/onboarding/getting_started_screen.dart';
 import 'package:healthcare/models/user_model.dart';
 import 'package:healthcare/services/auth_service.dart';
 import 'package:healthcare/services/socket_service.dart';
@@ -24,8 +21,6 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
   User? user;
   bool isLoading = true;
   bool isFirstLogin = false;
-  bool serverUnreachable = false;
-  bool shouldRedirectToLogin = false;
 
   @override
   void initState() {
@@ -37,81 +32,62 @@ class _SessionBootstrapperState extends State<SessionBootstrapper> {
     print("🔵 BOOTSTRAP STARTED");
 
     try {
-      // ---------------------------
-      // 1. Initialize Hive Boxes
-      // ---------------------------
+      // 1. Init Hive
       await _initHive();
-      // await SessionManager.setFirstLogin(value: 'true');
-      // await SessionManager.setFirstLoginReset();
-      // ---------------------------
+
+      print(AppUrls.apiUrl);
+
       // 2. Server Reachability
-      // ---------------------------
       final reachability = context.read<ReachabilityController>();
+      final reachable = await AuthService().isServerReachable();
+      reachability.updateReachability(reachable);
 
-      final serverReachable = await AuthService().isServerReachable();
-      reachability.updateReachability(serverReachable);
-
-      if (!serverReachable) {
-        print("⚠️ Server unreachable — skip validation, load cached user");
-
-        // Load cached user only
-        user = await SessionManager.getCurrentUser();
-      } else {
-        // ---------------------------
-        // 3. Initialize Session with validation
-        // ---------------------------
+      // 3. Load / Validate Session
+      if (reachable) {
         user = await SessionManager.initializeSession(validate: true);
+      } else {
+        user = await SessionManager.getCurrentUser();
       }
-      // ---------------------------
-      // 4. Socket Init
-      // ---------------------------
+
+      // 4. Init Socket
       if (user != null) {
         SocketService().init();
       } else {
-        // No logged-in user
-        final firstLoginCheck = await SessionManager.isFirstLogin();
-        isFirstLogin = firstLoginCheck;
-        if (SessionManager.sessionInvalid) {
-          ToastUtil.error(
-            "Session Invalid...Please Login",
-            gravity: ToastGravity.TOP,
-          );
-        }
-        print("⚠️ Skipping socket init — no logged-in user.");
+        isFirstLogin = await SessionManager.isFirstLogin();
       }
-    } catch (e, stack) {
+    } catch (e, st) {
       print("❌ Bootstrap error: $e");
-      print(stack);
+      print(st);
     }
 
     if (!mounted) return;
-    setState(() {
-      isLoading = false;
-    });
+
+    setState(() => isLoading = false);
   }
 
   Future<void> _initHive() async {
-    await Hive.openBox('auth');
+    // Auth Box
+    if (!Hive.isBoxOpen('auth')) {
+      await Hive.openBox('auth');
+    }
 
-    // ❗ If you always delete the doctor_application box,
-    // just recreate instead of open + delete + open
-    await Hive.deleteBoxFromDisk('doctor_application');
-    await Hive.openBox('doctor_application');
+    // Doctor application box — DO NOT DELETE EVERY TIME
+    if (!Hive.isBoxOpen('doctor_application')) {
+      await Hive.openBox('doctor_application');
+    }
 
-    await Hive.openBox('settings');
+    // Settings Box
+    if (!Hive.isBoxOpen('settings')) {
+      await Hive.openBox('settings');
+    }
 
     print("🟢 Hive Boxes Ready");
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return MaterialApp(theme: AppTheme.light, home: SplashScreen());
-    }
+    if (isLoading) return const SplashScreen();
 
-    return MyApp(
-      user,
-      isFirstLogin,
-    ); // MyApp already contains MaterialApp// MyApp already wraps MaterialApp with theme
+    return MyApp(user, isFirstLogin);
   }
 }

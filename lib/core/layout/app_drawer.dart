@@ -25,12 +25,15 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Future<void> loadUser() async {
     final user = await SessionManager.getCurrentUser();
-    if (user != null && mounted) {
-      setState(() {
-        name = user.name;
-        email = user.email;
-        profileImage = user.profileImage;
-      });
+
+    if (user != null) {
+      if (!mounted) {
+        return setState(() {
+          name = user.name;
+          email = user.email;
+          profileImage = user.profileImage;
+        });
+      }
     }
   }
 

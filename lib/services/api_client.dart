@@ -7,7 +7,7 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 
 class ApiClient {
-  static const String baseUrl = AppUrls.apiUrl;
+  static String baseUrl = AppUrls.apiUrl;
 
   final Map<String, String> defaultHeaders = {
     "Content-Type": "application/json",

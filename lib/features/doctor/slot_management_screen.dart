@@ -100,9 +100,6 @@ class _DoctorSlotManagementScreenState
   int _compareTimes(TimeOfDay a, TimeOfDay b) =>
       a.hour != b.hour ? a.hour - b.hour : a.minute - b.minute;
 
-  String _format24(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
   String _format12(DateTime dt) => DateFormat.jm().format(dt);
 
   Future<void> _addSlot() async {
