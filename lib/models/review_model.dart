@@ -13,13 +13,23 @@ class Review {
     required this.patientId,
   });
 
-  factory Review.fromJson(Map<String, dynamic> json) => Review(
-    rating: json["rating"],
-    comment: json["comment"],
-    patientName: json["patientName"],
-    patientId: json["patientId"],
-    createdAt: DateTime.parse(json["createdAt"]),
-  );
+  /// Safe JSON parser with fallbacks
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      rating: json["rating"] is int
+          ? json["rating"]
+          : int.tryParse(json["rating"]?.toString() ?? "0") ?? 0,
+
+      comment: json["comment"] ?? "",
+
+      patientName: json["patientName"] ?? "",
+      patientId: json["patientId"] ?? "",
+
+      createdAt: json["createdAt"] != null
+          ? DateTime.tryParse(json["createdAt"]) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
 
   /// Convert Review to JSON
   Map<String, dynamic> toJson() => {
@@ -29,4 +39,15 @@ class Review {
     "patientId": patientId,
     "createdAt": createdAt.toIso8601String(),
   };
+
+  /// Empty object constructor (like Slot.empty)
+  factory Review.empty() {
+    return Review(
+      rating: 0,
+      comment: "",
+      createdAt: DateTime.now(),
+      patientName: "",
+      patientId: "",
+    );
+  }
 }

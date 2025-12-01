@@ -30,45 +30,71 @@ class Doctor {
     this.user,
   });
 
+  // MAIN PARSER
   factory Doctor.fromJson(Map<String, dynamic> json) {
+    final appJson = json["application"] ?? {};
+    final personalInfo = appJson["personalInfo"] ?? {};
+
     return Doctor(
       id: json["_id"] ?? "",
-      name: json["application"]?["personalInfo"]?["fullName"] ?? "",
-      specialization: json["specialization"] ?? "",
+      name: personalInfo["fullName"] ?? json["name"] ?? "",
+      specialization:
+          json["specialization"] ??
+          appJson["clinicInfo"]?["specialization"] ??
+          "",
       profileImage: json["user"]?["profileImage"] ?? json["profileImage"] ?? "",
       averageRating: (json["averageRating"] ?? 0).toDouble(),
-      application: Application.fromJson(json["application"] ?? {}),
-      slots: (json["slots"] is List)
-          ? (json["slots"] as List).map((s) => Slot.fromJson(s)).toList()
-          : [],
-      bio: json["bio"] ?? "",
-      recentReviews: (json["recentReviews"] is List)
-          ? (json["recentReviews"] as List)
-                .map((r) => Review.fromJson(r))
+
+      application: Application.fromJson(appJson),
+
+      slots: json["slots"] is List
+          ? (json["slots"] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(Slot.fromJson)
                 .toList()
           : [],
+
+      bio: json["bio"] ?? "",
+
+      recentReviews: json["recentReviews"] is List
+          ? (json["recentReviews"] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(Review.fromJson)
+                .toList()
+          : [],
+
       approved: json["approved"] ?? false,
+
       user: json["user"] != null ? User.fromJson(json["user"]) : null,
     );
   }
 
-  // For mapping doctor inside an appointment response
+  // DOCTOR INSIDE APPOINTMENT API
   factory Doctor.fromAppointmentJson(Map<String, dynamic> json) {
     try {
       final doctorJson = json['doctor'] ?? {};
+      final appJson = doctorJson["application"] ?? {};
+      final personalInfo = appJson["personalInfo"] ?? {};
 
       return Doctor(
         id: doctorJson["_id"] ?? "",
-        name: doctorJson["application"]?["personalInfo"]?["fullName"] ?? "",
+        name: personalInfo["fullName"] ?? doctorJson["name"] ?? "",
         specialization: doctorJson["specialization"] ?? "",
-        profileImage: doctorJson["user"]?["profileImage"] ?? "",
+        profileImage:
+            doctorJson["user"]?["profileImage"] ??
+            doctorJson["profileImage"] ??
+            "",
         averageRating: (doctorJson["averageRating"] ?? 0).toDouble(),
-        application: Application.fromJson(doctorJson["application"] ?? {}),
-        slots: [],
+        application: Application.fromJson(appJson),
+
+        slots: const [], // No slots in appointment response
         bio: doctorJson["bio"] ?? "",
-        recentReviews: [],
+        recentReviews: const [],
         approved: doctorJson["approved"] ?? false,
-        user: User.fromJson(doctorJson["user"]),
+
+        user: doctorJson["user"] != null
+            ? User.fromJson(doctorJson["user"])
+            : null,
       );
     } catch (e, stack) {
       print('❌ Failed to parse Doctor: $e');
@@ -78,6 +104,7 @@ class Doctor {
     }
   }
 
+  // DOCTOR FROM USER DATA
   factory Doctor.fromUserJson(Map<String, dynamic> userJson) {
     final doctorJson = userJson['doctor'] ?? {};
     final applicationJson = doctorJson['application'] ?? {};
@@ -95,6 +122,7 @@ class Doctor {
       bio: doctorJson['bio'] ?? '',
       slots: [],
       recentReviews: [],
+
       application: Application(
         personalInfo: PersonalInfo(
           fullName: personalInfo['fullName'] ?? '',
@@ -112,13 +140,15 @@ class Doctor {
           clinicName: clinicInfo['clinicName'] ?? '',
           clinicAddress: clinicInfo['clinicAddress'] ?? '',
         ),
-        documents: (documents is List)
+        documents: documents is List
             ? documents
                   .whereType<Map<String, dynamic>>()
                   .map((d) => DocumentModel.fromJson(d))
                   .toList()
             : [],
       ),
+
+      user: User.fromJson(userJson),
     );
   }
 
@@ -152,8 +182,9 @@ class Application {
     return Application(
       personalInfo: PersonalInfo.fromJson(json['personalInfo'] ?? {}),
       clinicInfo: ClinicInfo.fromJson(json['clinicInfo'] ?? {}),
-      documents: (json['documents'] is List)
+      documents: json['documents'] is List
           ? (json['documents'] as List)
+                .whereType<Map<String, dynamic>>()
                 .map((d) => DocumentModel.fromJson(d))
                 .toList()
           : [],
@@ -188,7 +219,9 @@ class PersonalInfo {
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       qualifications: json['qualifications'] ?? '',
-      experienceYears: json['experienceYears'] ?? 0,
+      experienceYears: json['experienceYears'] is int
+          ? json['experienceYears']
+          : int.tryParse(json['experienceYears']?.toString() ?? '') ?? 0,
     );
   }
 

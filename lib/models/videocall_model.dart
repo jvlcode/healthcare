@@ -9,19 +9,19 @@ class VideoCall {
   String? videoUrl;
 
   VideoCall({
+    required this.id,
     required this.doctorName,
     required this.specialty,
     required this.startedAt,
     required this.endedAt,
     this.videoUrl,
-    required this.id,
   });
 
-  // ✅ Helpers for UI
+  // UI Helpers
   String get date => DateFormat('MMM d, yyyy').format(startedAt.toLocal());
   String get time => DateFormat('h:mm a').format(startedAt.toLocal());
 
-  /// ✅ Duration between start and end
+  // Duration between start and end
   String get duration {
     final diff = endedAt.difference(startedAt);
     final hours = diff.inHours;
@@ -37,16 +37,28 @@ class VideoCall {
     }
   }
 
+  /// Safe JSON parser
   factory VideoCall.fromJson(Map<String, dynamic> json) {
     try {
-      return VideoCall(
-        id: json['_id'] ?? "temp_id",
+      final startRaw = json['startedAt']?.toString();
+      final endRaw = json['endedAt']?.toString();
 
+      final startedAt = startRaw != null
+          ? DateTime.tryParse(startRaw)?.toLocal() ?? DateTime.now()
+          : DateTime.now();
+
+      final endedAt = endRaw != null
+          ? DateTime.tryParse(endRaw)?.toLocal() ??
+                startedAt.add(const Duration(minutes: 30))
+          : startedAt.add(const Duration(minutes: 30));
+
+      return VideoCall(
+        id: json['_id']?.toString() ?? "temp_id",
         doctorName:
             json["doctor"]?["application"]?["personalInfo"]?["fullName"] ?? "",
         specialty: json["doctor"]?["specialization"] ?? "",
-        startedAt: DateTime.parse(json['startedAt']),
-        endedAt: DateTime.parse(json['endedAt']),
+        startedAt: startedAt,
+        endedAt: endedAt,
         videoUrl: json["videoUrl"],
       );
     } catch (e, stack) {
@@ -55,5 +67,28 @@ class VideoCall {
       print('Raw JSON: $json');
       rethrow;
     }
+  }
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() => {
+    "_id": id,
+    "doctorName": doctorName,
+    "specialty": specialty,
+    "startedAt": startedAt.toIso8601String(),
+    "endedAt": endedAt.toIso8601String(),
+    "videoUrl": videoUrl,
+  };
+
+  /// Empty object
+  factory VideoCall.empty() {
+    final now = DateTime.now();
+    return VideoCall(
+      id: "",
+      doctorName: "",
+      specialty: "",
+      startedAt: now,
+      endedAt: now.add(const Duration(minutes: 30)),
+      videoUrl: null,
+    );
   }
 }

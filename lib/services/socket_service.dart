@@ -125,7 +125,7 @@ class SocketService {
     if (payload['fromUserId'] == null) {
       payload['fromUserId'] = userId;
     }
-    // print("[$event] $payload");
+    print("[$event] $payload");
     _socket!.emit(event, payload);
   }
 

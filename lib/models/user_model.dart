@@ -24,14 +24,16 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     try {
       return User(
-        id: json['_id'],
-        name: json['name'],
-        email: json['email'],
-        phone: json['phone'],
-        role: json['role'],
+        id: json['_id'] ?? json['id'] ?? "",
+        name: json['name'] ?? "",
+        email: json['email'] ?? "",
+        phone: json['phone'] ?? "",
+        role: json['role'] ?? "",
         profileImage: json['profileImage'],
         bio: json['bio'],
-        doctor: json['doctor'] != null ? Doctor.fromUserJson(json) : null,
+        doctor: json['doctor'] != null
+            ? Doctor.fromUserJson(json['doctor']) // ✅ FIXED
+            : null,
       );
     } catch (e, stack) {
       print('❌ Failed to parse User: $e');
@@ -40,6 +42,7 @@ class User {
       rethrow;
     }
   }
+
   User copyWith({Doctor? doctor}) {
     return User(
       id: id,
@@ -61,6 +64,19 @@ class User {
     'role': role,
     'profileImage': profileImage,
     'bio': bio,
-    'doctor': doctor?.toJson(),
+    'doctor': doctor?.toJson(), // ✅ FIXED for Hive storage
   };
+
+  factory User.empty() {
+    return User(
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      role: "",
+      profileImage: null,
+      bio: null,
+      doctor: null,
+    );
+  }
 }

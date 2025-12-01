@@ -9,9 +9,6 @@ class CallPayload {
   final String? doctorName;
   final String? patientName;
   final String? fromUserId;
-  set fromUserId (String value) {
-      fromUserId = value;
-  }
   final String toUserId;
   final String? callerName;
 
@@ -30,21 +27,25 @@ class CallPayload {
     this.patientName,
   });
 
-  factory CallPayload.fromJson(Map<String, dynamic> json) => CallPayload(
-    callerName: json['callerName'],
-    appointmentId: json['appointmentId'],
-    roomId: json['roomId'],
-    startTime: json['startTime'],
-    endTime: json['endTime'],
-    reason: json['reason'],
-    doctorName: json['doctorName'],
-    patientName: json['patientName'],
-    doctorId: json['doctorId'],
-    patientId: json['patientId'],
-    fromUserId: json['fromUserId'],
-    toUserId: json['toUserId'],
-  );
+  /// Safe JSON parser
+  factory CallPayload.fromJson(Map<String, dynamic> json) {
+    return CallPayload(
+      callerName: json['callerName']?.toString(),
+      appointmentId: json['appointmentId']?.toString() ?? "",
+      roomId: json['roomId']?.toString(),
+      startTime: json['startTime']?.toString(),
+      endTime: json['endTime']?.toString(),
+      reason: json['reason']?.toString(),
+      doctorName: json['doctorName']?.toString(),
+      patientName: json['patientName']?.toString(),
+      doctorId: json['doctorId']?.toString() ?? "",
+      patientId: json['patientId']?.toString() ?? "",
+      fromUserId: json['fromUserId']?.toString(),
+      toUserId: json['toUserId']?.toString() ?? "",
+    );
+  }
 
+  /// Convert to JSON
   Map<String, dynamic> toJson() => {
     'fromUserId': fromUserId,
     'toUserId': toUserId,
@@ -57,5 +58,24 @@ class CallPayload {
     'reason': reason,
     'doctorName': doctorName,
     'patientName': patientName,
+    'callerName': callerName,
   };
+
+  /// Empty object
+  factory CallPayload.empty() {
+    return CallPayload(
+      doctorId: "",
+      patientId: "",
+      appointmentId: "",
+      toUserId: "",
+      fromUserId: null,
+      roomId: null,
+      startTime: null,
+      endTime: null,
+      reason: null,
+      doctorName: null,
+      patientName: null,
+      callerName: null,
+    );
+  }
 }
