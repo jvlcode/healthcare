@@ -32,7 +32,9 @@ class User {
         profileImage: json['profileImage'],
         bio: json['bio'],
         doctor: json['doctor'] != null
-            ? Doctor.fromUserJson(json['doctor']) // ✅ FIXED
+            ? Doctor.fromUserJson(
+                Map<String, dynamic>.from(json['doctor']),
+              ) // ✅ FIXED
             : null,
       );
     } catch (e, stack) {

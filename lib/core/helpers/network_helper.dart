@@ -74,10 +74,6 @@ class NetworkHelper {
           final message = (result is Map && result['message'] != null)
               ? result['message']
               : "Unknown error";
-
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(message.toString())));
         }
       }
 

@@ -6,6 +6,7 @@ import 'package:healthcare/features/auth/login_screen.dart';
 import 'package:healthcare/features/auth/register_screen.dart';
 import 'package:healthcare/features/auth/forgot_password.dart';
 import 'package:healthcare/features/auth/reset_password.dart';
+import 'package:healthcare/features/doctor/application/application_stepper_screen.dart';
 
 // Doctor
 import 'package:healthcare/features/doctor/doctor_home_screen.dart';
@@ -76,12 +77,13 @@ class AppRoutes {
     // Doctor
     // doctorWrapper: (context) => DoctorWrapper(),
     doctorHome: (context) => DoctorHomeScreen(),
-    doctorApply: (context) => DoctorApplicationWelcomeScreen(),
-    doctorApplyPersonal: (context) => ApplicationStep1PersonalInfoScreen(),
-    doctorApplyClinic: (context) => ApplicationStep2ClinicDetailsScreen(),
-    doctorApplyDocuments: (context) => ApplicationStep3DocumentUploadScreen(),
-    doctorApplyReview: (context) => ApplicationStep4ReviewSubmitScreen(),
-    doctorApplyStatus: (context) => ApplicationStatusScreen(),
-    doctorSlot: (context) => DoctorSlotManagementScreen(),
+    // doctorApply: (context) => DoctorApplicationWelcomeScreen(),
+    // doctorApplyPersonal: (context) => ApplicationStep1PersonalInfoScreen(),
+    // doctorApplyClinic: (context) => ApplicationStep2ClinicDetailsScreen(),
+    // doctorApplyDocuments: (context) => ApplicationStep3DocumentUploadScreen(),
+    // doctorApplyReview: (context) => ApplicationStep4ReviewSubmitScreen(),
+    // doctorApplyStatus: (context) => ApplicationStatusScreen(),
+    // doctorSlot: (context) => DoctorSlotManagementScreen(),
+    doctorApply: (context) => ApplicationStepperScreen(),
   };
 }

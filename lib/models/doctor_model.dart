@@ -13,7 +13,7 @@ class Doctor {
 
   final Application application;
   final String bio;
-  final User? user;
+  final String? user;
   final List<Review> recentReviews;
 
   Doctor({
@@ -65,7 +65,7 @@ class Doctor {
 
       approved: json["approved"] ?? false,
 
-      user: json["user"] != null ? User.fromJson(json["user"]) : null,
+      user: json["user"]?['_id'] ?? "",
     );
   }
 
@@ -92,9 +92,7 @@ class Doctor {
         recentReviews: const [],
         approved: doctorJson["approved"] ?? false,
 
-        user: doctorJson["user"] != null
-            ? User.fromJson(doctorJson["user"])
-            : null,
+        user: doctorJson["user"]?["_id"] ?? "",
       );
     } catch (e, stack) {
       print('❌ Failed to parse Doctor: $e');
@@ -148,7 +146,7 @@ class Doctor {
             : [],
       ),
 
-      user: User.fromJson(userJson),
+      user: userJson["_id"] ?? null,
     );
   }
 
@@ -163,7 +161,7 @@ class Doctor {
     "slots": slots.map((s) => s.toJson()).toList(),
     "recentReviews": recentReviews.map((r) => r.toJson()).toList(),
     "application": application.toJson(),
-    "user": user?.toJson(),
+    "user": user,
   };
 }
 
