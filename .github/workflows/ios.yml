@@ -27,11 +27,8 @@ jobs:
         run: flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
 
       - name: Build iOS Debug IPA (unsigned)
-        run: flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
-      - name: Package unsigned IPA
-        run: |
-          mkdir -p build/ios/ipa
-          xcrun -sdk iphoneos PackageApplication -v build/ios/Debug-iphoneos/Runner.app -o build/ios/ipa/Runner.ipa
+        run: flutter build ipa --debug --no-codesign --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
+
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
