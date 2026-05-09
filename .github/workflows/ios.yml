@@ -26,9 +26,13 @@ jobs:
       - name: Build iOS (debug)
         run: flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
 
-      - name: Upload build artifact
+      - name: Build iOS Debug IPA
+        run: flutter build ipa --debug --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
+
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-debug-app
-          path: build/ios/Debug-iphoneos/*.app
+          name: ios-debug-ipa
+          path: build/ios/ipa/*.ipa
+
 
