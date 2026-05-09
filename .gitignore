@@ -45,3 +45,4 @@ app.*.map.json
 /android/app/release
 # Ignore auto-generated Android launcher icons
 .env*
+.vscode/launch.json

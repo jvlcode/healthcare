@@ -40,8 +40,18 @@ class ApiClient {
         headers: headers,
         body: jsonEncode(body),
       );
-      print("API ERROR REQUEST: ${body}");
-      print("API RESPONSE: ${res.body}");
+
+      // Debug logs
+      print("=== API REQUEST DEBUG ===");
+      print("Method: POST");
+      print("URL: $uri");
+      print("Headers: $headers");
+      print("Body: ${jsonEncode(body)}");
+      print("=== API RESPONSE DEBUG ===");
+      print("Status: ${res.statusCode}");
+      print("Response Headers: ${res.headers}");
+      print("Response Body: ${res.body}");
+
       final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
       if (res.statusCode >= 200 && res.statusCode < 300) {
         return {'success': true, 'data': data};
@@ -52,7 +62,7 @@ class ApiClient {
         };
       }
     } catch (e) {
-      print(e);
+      print("Request Error: $e");
       return {'success': false, 'message': e.toString()};
     }
   }
@@ -68,6 +78,10 @@ class ApiClient {
       ),
     );
 
+    print("=== API REQUEST DEBUG ===");
+    print("Method: POST");
+    print("URL: $uri");
+
     final headers = Map<String, String>.from(defaultHeaders);
 
     if (useAuth) {
@@ -80,6 +94,18 @@ class ApiClient {
     try {
       final res = await http.get(uri, headers: headers);
       final data = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+
+      // Debug logs
+      print("=== API REQUEST DEBUG ===");
+      print("Method: POST");
+      print("URL: $uri");
+      print("Headers: $headers");
+      print("Body: ${jsonEncode(data)}");
+      print("=== API RESPONSE DEBUG ===");
+      print("Status: ${res.statusCode}");
+      print("Response Headers: ${res.headers}");
+      print("Response Body: ${res.body}");
+
       if (res.statusCode >= 200 && res.statusCode < 300) {
         return {'success': true, 'data': data};
       } else {

@@ -1,3 +1,4 @@
+import 'package:healthcare/core/constants/urls.dart';
 import 'package:healthcare/models/user_model.dart';
 
 import 'api_client.dart';
@@ -62,6 +63,7 @@ class AuthService {
   }
 
   Future<bool> isServerReachable() async {
+    print("URL CHECK  ${AppUrls.apiUrl}");
     try {
       final result = await _apiClient
           .get("ping", useAuth: false)
