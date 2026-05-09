@@ -1,37 +1,31 @@
-name: Flutter iOS Build
+name: iOS Debug Build
 
 on:
+  workflow_dispatch:   # run manually
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
-  build-ios:
+  build:
     runs-on: macos-latest
 
     steps:
-      # 1. Checkout your Flutter project
-      - name: Checkout source
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Install Flutter
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ' ^3.9.2'   # set your Flutter version
+          flutter-version: '3.22.0'
 
-      # 3. Install dependencies
-      - name: Flutter pub get
+      - name: Install dependencies
         run: flutter pub get
 
-      # 4. Build iOS (unsigned)
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
+      - name: Build iOS (debug)
+        run: flutter build ios --debug --no-codesign --dart-define=API_BASE_URL=https://healthcare-backend-production-83a6.up.railway.app
 
-      # 5. Archive build artifacts
-      - name: Upload iOS build
+      - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ios-build
-          path: build/ios/iphoneos
+          name: ios-debug-app
+          path: build/ios/Debug-iphoneos/*.app
